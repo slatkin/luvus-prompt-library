@@ -45,7 +45,8 @@ force one.
 ## Requirements
 
 - **Node >= 23.6** — the module scripts are TypeScript run directly by
-  `node` (type stripping), with no npm dependencies.
+  `node` (type stripping); the module needs no npm dependencies to run.
+  (The dev tooling for lint/format/CI gates uses devDependencies only.)
 - **luvus >= 0.14.3** — needs `luvus agent list` with terminal ids and
   `luvus agent prompt --terminal-id`.
 - Your agent must be running inside luvus so it appears in
