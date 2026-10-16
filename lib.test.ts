@@ -155,7 +155,7 @@ test("scanTree: isLast marks the last row of each sibling group", () => {
   rmSync(root, { recursive: true, force: true });
 });
 
-test("branchPrefixes: a pipe follows each ancestor that still has a later sibling", () => {
+test("branchPrefixes: children of a top-level folder draw no pipe", () => {
   const root = tempLibrary();
   const rows = scanTree(root, new Set(["review"]));
   const prefixes = branchPrefixes(rows);
@@ -163,18 +163,19 @@ test("branchPrefixes: a pipe follows each ancestor that still has a later siblin
     rows.map((r, i) => [r.rel, prefixes[i]]),
     [
       ["review", ""], // root rows carry no prefix
-      ["review/rust.md", "│ ├─ "],
-      ["review/ts.md", "│ └─ "],
+      ["review/rust.md", "  ├─ "], // blank guide: `review` is a root row, so it has no line to join
+      ["review/ts.md", "  └─ "],
       ["plan.md", ""],
     ],
   );
   rmSync(root, { recursive: true, force: true });
 });
 
-test("branchPrefixes: one two-column guide cell per ancestor level", () => {
+test("branchPrefixes: one guide cell per ancestor, with a pipe below depth 0", () => {
   const root = mkdtempSync(path.join(tmpdir(), "prompt-dock-test-"));
   mkdirSync(path.join(root, "a", "b"), { recursive: true });
   writeFileSync(path.join(root, "a", "b", "deep.md"), "deep\n");
+  writeFileSync(path.join(root, "a", "c.md"), "c\n");
   writeFileSync(path.join(root, "z.md"), "z\n");
   const rows = scanTree(root, new Set(["a", "a/b"]));
   const prefixes = branchPrefixes(rows);
@@ -182,8 +183,9 @@ test("branchPrefixes: one two-column guide cell per ancestor level", () => {
     rows.map((r, i) => [r.rel, prefixes[i]]),
     [
       ["a", ""],
-      ["a/b", "│ └─ "], // `a` is not last, so its column keeps the pipe
-      ["a/b/deep.md", "│   └─ "],
+      ["a/b", "  ├─ "], // `a` has no connector, so its guide cell stays blank
+      ["a/b/deep.md", "  │ └─ "], // `b` is joined to `c.md`, so its column keeps the pipe
+      ["a/c.md", "  └─ "],
       ["z.md", ""],
     ],
   );

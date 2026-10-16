@@ -18,15 +18,19 @@ The module SHALL read the prompt library from the folder in the module setting `
 - **THEN** the dock shows one muted row that names the missing folder, and no other rows
 
 ### Requirement: Tree rows
-The dock SHALL show one row per folder and one row per `.md` file under the root, in depth-first order. A row with a parent SHALL start with a box-drawing branch prefix: one two-column guide cell per ancestor (`│ ` while that ancestor still has a later sibling at its own level, `  ` once it does not), then a connector, `├─ ` when a sibling follows the row and `└─ ` when it is the last of its level. A root-level row SHALL have no prefix. Folders SHALL come before files at each level, and each group SHALL be sorted by name. Prompt rows SHALL show the file name without `.md`. Hidden entries (names that start with `.`) and non-`.md` files SHALL NOT show.
+The dock SHALL show one row per folder and one row per `.md` file under the root, in depth-first order. A row with a parent SHALL start with a box-drawing branch prefix: one two-column guide cell per ancestor, then a connector, `├─ ` when a sibling follows the row and `└─ ` when it is the last of its level. A guide cell SHALL be `│ ` only when its ancestor has a later sibling at its own level AND that ancestor is not a root-level row: the pipe joins the ancestor's connector to its next sibling, and a root-level row has no connector. Every other guide cell SHALL be blank. A root-level row SHALL have no prefix. Folders SHALL come before files at each level, and each group SHALL be sorted by name. Prompt rows SHALL show the file name without `.md`. Hidden entries (names that start with `.`) and non-`.md` files SHALL NOT show.
 
 #### Scenario: Nested library
 - **WHEN** the root has `review/rust.md`, `review/ts.md` and `plan.md`, and `review` is expanded
-- **THEN** the dock shows `review` (folder), then `rust` and `ts` on a `│ ├─ ` and `│ └─ ` branch, then `plan`
+- **THEN** the dock shows `review` (folder), then `rust` and `ts` on a `  ├─ ` and `  └─ ` branch, then `plan`
 
-#### Scenario: Branch glyphs
-- **WHEN** the root holds `claude` and `pi`, both expanded with prompts inside, and `pi` is the last row
-- **THEN** the prompts under `claude` are prefixed `│ ├─ ` and `│ └─ `, and the prompts under `pi` are prefixed `  ├─ ` and `  └─ `
+#### Scenario: No phantom line under a root-level folder
+- **WHEN** the root holds `claude` and `pi`, both expanded with prompts inside
+- **THEN** every child row is prefixed `  ├─ ` or `  └─ `, and no row carries a `│` in its guide cells
+
+#### Scenario: Pipe below a nested folder that has a sibling
+- **WHEN** the expanded folder `nested` sits above other prompts inside `pi`, and `nested` holds a prompt
+- **THEN** `nested` is prefixed `  ├─ ` and its child is prefixed `  │ └─ `
 
 #### Scenario: Ignored files
 - **WHEN** the root has `notes.txt` and `.git/`

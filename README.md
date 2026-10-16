@@ -18,20 +18,23 @@ prompt library root as a folder tree:
 - Folders are collapsed by default. Clicking one expands or collapses it, and
   the expanded set survives restarts.
 - The tree is drawn with box-drawing branches. A row with a parent starts with a
-  `├─` or `└─` connector, and each ancestor that still has a row after it
-  contributes a `│` guide column. Root-level rows have no prefix.
+  `├─` or `└─` connector. A nested folder that still has a row after it adds a
+  `│` guide column to its children, so the pipe shows only where a line really
+  joins two rows. Root-level rows have no prefix, and their children draw no
+  line above them.
 - Every row also starts with a Nerd Font glyph: a folder shows `md-folder`, or
   `md-folder_open` when it is expanded, and a prompt shows `md-chat`. A
   terminal without a Nerd Font shows boxes instead.
 
 ```text
-  claude
-  │ ├─  mbv-orchestrator
-  │ ├─  pi-orchestrator
-  │ └─  shot
-  pi
-    ├─  orchestrator
-    └─  simple
+ claude
+  ├─  mbv-orchestrator
+  ├─  pi-orchestrator
+  └─  shot
+ pi
+  ├─  nested
+  │ └─  deep
+  └─  simple
 ```
 - Clicking a prompt selects it (accent colour); it does not open an editor.
 - Only `.md` files show (any letter case); hidden entries (names starting with

@@ -24,9 +24,9 @@ import {
 
 const DOCK_ID = "prompts";
 const DOCK_TITLE = "PROMPTS";
-// The tree is drawn with box-drawing branches (design D12). Each row with a
-// parent starts with one guide cell per ancestor, then a connector; root rows
-// carry no prefix, so their glyph sits at the dock's left edge.
+// The tree is drawn with box-drawing branches. Each row with a parent starts
+// with one guide cell per ancestor, then a connector; root rows carry no prefix,
+// so their glyph sits at the dock's left edge.
 const GUIDE_PIPE = "│ ";
 const GUIDE_BLANK = "  ";
 const BRANCH_MID = "├─ ";
@@ -102,10 +102,13 @@ export function sendMenuEntries(
 
 /**
  * The branch prefix for every row, in row order (spec: tree rows). A row draws
- * one two-column guide cell per ancestor: a pipe while that ancestor still has a
- * later sibling, blanks once it does not. A row with a parent then gets a
- * connector: `├─` when a sibling follows it, `└─` when it is the last. Root rows
- * get no prefix.
+ * one two-column guide cell per ancestor, then a connector: `├─` when a sibling
+ * follows it, `└─` when it is the last. Root rows get no prefix.
+ *
+ * A guide cell is a pipe only when its ancestor has a later sibling AND is not a
+ * root row: a pipe continues the ancestor's own connector down to the next
+ * sibling, and a root row has no connector. So the children of a top-level
+ * folder keep the two columns but draw no line back up to the folder.
  */
 export function branchPrefixes(rows: readonly TreeRow[]): string[] {
   // `hasLater[d]` is the last row seen at depth `d`. It is the ancestor of every
@@ -114,7 +117,7 @@ export function branchPrefixes(rows: readonly TreeRow[]): string[] {
   return rows.map((row) => {
     const guides = hasLater
       .slice(0, row.depth)
-      .map((later) => (later ? GUIDE_PIPE : GUIDE_BLANK))
+      .map((later, depth) => (depth > 0 && later ? GUIDE_PIPE : GUIDE_BLANK))
       .join("");
     hasLater[row.depth] = !row.isLast;
     if (row.depth === 0) return "";
