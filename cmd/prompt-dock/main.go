@@ -20,10 +20,6 @@ func notImplemented(verb string) error {
 	return fmt.Errorf("%s: not implemented", verb)
 }
 
-// runRefresh repaints the dock after startup, events, and the Refresh action
-// (task 3.1).
-func runRefresh() error { return notImplemented("refresh") }
-
 // runToggle expands or collapses a folder row (task 3.3).
 func runToggle() error { return notImplemented("toggle") }
 
