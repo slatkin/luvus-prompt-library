@@ -13,8 +13,8 @@
 
 ## 3. Editing (spec: prompt-dock)
 
-- [ ] 3.1 Implement `edit.ts` inline mode: read `layout.file_open` (fall back to `nvim` when empty, `readonly` or unreadable), `pane split --no-focus`, then `pane run <pane> <editor> '<abs>'`. Refuse a path that contains `'` with a toast. Verify: clicking a prompt row opens it in the configured editor in a new pane, and with `readonly` set it opens in `nvim`.
-- [ ] 3.2 Implement `edit.ts` external mode (detached spawn, `stdio: "ignore"`, `unref`) and the stdlib PATH probe that adds the zed/VS Code menu entries only when the binary is found. Verify: the entry for a missing binary does not show, "Open in zed" opens the file, and `luvus module log` shows no hang note.
+- [x] 3.1 Implement `edit.ts` inline mode: read `layout.file_open` (fall back to `nvim` when empty, `readonly` or unreadable), `pane split --no-focus`, then `pane run <pane> <editor> '<abs>'`. Refuse a path that contains `'` with a toast. Verify: clicking a prompt row opens it in the configured editor in a new pane, and with `readonly` set it opens in `nvim`.
+- [x] 3.2 Implement `edit.ts` external mode (detached spawn, `stdio: "ignore"`, `unref`) and the stdlib PATH probe that adds the zed/VS Code menu entries only when the binary is found. Verify: the entry for a missing binary does not show, "Open in zed" opens the file, and `luvus module log` shows no hang note.
 
 ## 4. Send to agent (spec: agent-prompt-send)
 
