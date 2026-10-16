@@ -27,9 +27,7 @@ func TestEditExternalRejectsAnUnknownEditor(t *testing.T) {
 	if err := runEditExternal(); err == nil {
 		t.Error("runEditExternal(notepad|plan.md) = nil, want an error")
 	}
-	if got := countCalls(t, log, "luvus"); got != 0 {
-		t.Errorf("luvus calls after an unknown editor = %d, want 0", got)
-	}
+	requireNoCalls(t, log)
 }
 
 func TestEditExternalRejectsAMalformedValue(t *testing.T) {
@@ -41,7 +39,5 @@ func TestEditExternalRejectsAMalformedValue(t *testing.T) {
 	if err := runEditExternal(); err == nil {
 		t.Error("runEditExternal(plan.md) = nil, want an error")
 	}
-	if got := countCalls(t, log, "luvus"); got != 0 {
-		t.Errorf("luvus calls after a malformed value = %d, want 0", got)
-	}
+	requireNoCalls(t, log)
 }

@@ -25,6 +25,22 @@ func countCalls(t *testing.T, log string, command string) int {
 	return strings.Count(string(raw), command)
 }
 
+// requireNoCalls fails when the fake-luvus log has any content; a missing
+// log file means no calls.
+func requireNoCalls(t *testing.T, log string) {
+	t.Helper()
+	raw, err := os.ReadFile(log)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
+		t.Fatal(err)
+	}
+	if len(raw) != 0 {
+		t.Errorf("call log = %q, want no luvus calls", raw)
+	}
+}
+
 func TestRunToggleAddsThenRemovesAFolderInExpandedJSONAndPushesRowsEachTime(t *testing.T) {
 	root := tempLibrary(t)
 	log := fakeLuvusLog(t)
@@ -75,7 +91,5 @@ func TestRunToggleRejectsAValueThatEscapesTheRoot(t *testing.T) {
 	if err := runToggle(); err == nil {
 		t.Error("runToggle(../x.md) = nil, want an error")
 	}
-	if got := countCalls(t, log, "luvus"); got != 0 {
-		t.Errorf("luvus calls after a refused toggle = %d, want 0", got)
-	}
+	requireNoCalls(t, log)
 }

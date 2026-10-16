@@ -66,7 +66,5 @@ func TestRunSelectRejectsAValueThatEscapesTheRoot(t *testing.T) {
 	if err := runSelect(); err == nil {
 		t.Error("runSelect(../x.md) = nil, want an error")
 	}
-	if got := countCalls(t, log, "luvus"); got != 0 {
-		t.Errorf("luvus calls after a refused select = %d, want 0", got)
-	}
+	requireNoCalls(t, log)
 }
