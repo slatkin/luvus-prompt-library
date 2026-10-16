@@ -17,20 +17,24 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { resolveInlineEditor, splitExternalValue } from "./edit.ts";
-import { editorMenuEntries, sendMenuEntries } from "./refresh.ts";
+import { editMenuEntries, sendMenuEntries } from "./refresh.ts";
 
 import {
+  agentsInWorkspace,
   encodeSendValue,
   expandHome,
   findOnPath,
   parseAgents,
   readExpanded,
+  readSelected,
   resolveRoot,
   resolveUnderRoot,
   scanTree,
   splitSendValue,
   targetLabel,
+  type AgentInfo,
   writeExpanded,
+  writeSelected,
 } from "./lib.ts";
 
 // Tests that run a POSIX shell script or create symlinks are skipped on Windows.
@@ -154,6 +158,17 @@ test("writeExpanded then readExpanded round-trips the folder set", () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+test("writeSelected then readSelected round-trips, and junk reads as no selection", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "prompt-dock-state-"));
+  assert.equal(readSelected(dir), null);
+  writeSelected(dir, "review/plan.md");
+  assert.equal(readSelected(dir), "review/plan.md");
+  // A corrupt file after a good write still reads as no selection (design D9).
+  writeFileSync(path.join(dir, "selected.json"), "{not json");
+  assert.equal(readSelected(dir), null);
+  rmSync(dir, { recursive: true, force: true });
+});
+
 // ---- editing helpers (tasks 3.1 / 3.2) ----
 test("resolveInlineEditor keeps the configured editor", () => {
   assert.equal(resolveInlineEditor("hx"), "hx");
@@ -175,17 +190,17 @@ test("findOnPath returns false for a missing binary", () => {
   assert.equal(findOnPath("definitely-not-a-real-binary-xyz"), false);
 });
 
-test("editorMenuEntries use the editor|relpath encoding", () => {
+test("editMenuEntries use the editor|relpath encoding", () => {
   // Editors are passed in, so the test does not depend on what is on PATH.
-  const entries = editorMenuEntries("review/plan.md", [
-    { bin: "zed", title: "Open in zed" },
-    { bin: "code", title: "Open in VS Code" },
+  const entries = editMenuEntries("review/plan.md", [
+    { bin: "zed", label: "zed" },
+    { bin: "code", label: "VS Code" },
   ]);
   assert.deepEqual(
     entries.map((e) => [e.title, e.action, e.value]),
     [
-      ["Open in zed", "edit-external", "zed|review/plan.md"],
-      ["Open in VS Code", "edit-external", "code|review/plan.md"],
+      ["Edit in zed", "edit-external", "zed|review/plan.md"],
+      ["Edit in VS Code", "edit-external", "code|review/plan.md"],
     ],
   );
 });
@@ -209,32 +224,26 @@ test("splitSendValue splits on the first two | only, so | in a relpath works", (
   assert.deepEqual(splitSendValue("no-separators.md"), ["", "", "no-separators.md"]);
 });
 
-test("targetLabel: a named agent shows alias, kind, status, and workspace", () => {
+test("targetLabel: a named agent shows alias, kind and pane only", () => {
   const label = targetLabel({
     pane: "9",
     agent: "pi",
     terminal_id: "a".repeat(32),
     name: "pipi",
-    status: "idle",
-    workspace_name: "pi-luvus",
+    workspace: "3",
   });
-  for (const part of ["pipi", "pi", "idle", "pi-luvus"]) {
-    assert.ok(label.includes(part), `label ${label} should contain ${part}`);
-  }
+  assert.equal(label, "pipi (pi) · pane 9");
 });
 
-test("targetLabel: an unnamed agent shows kind and pane id, without the parenthetical", () => {
+test("targetLabel: an unnamed agent shows kind and pane, without the parenthetical", () => {
   const label = targetLabel({
     pane: "118",
     agent: "claude",
     terminal_id: "a".repeat(32),
     name: null,
-    status: "working",
-    workspace_name: "mbv",
+    workspace: "2",
   });
-  assert.ok(label.includes("claude"), label);
-  assert.ok(label.includes("118"), label);
-  assert.ok(!label.includes("(claude)"), `label ${label} should have no parenthetical kind`);
+  assert.equal(label, "claude · pane 118");
 });
 
 test("parseAgents reads the agent array out of the CLI envelope", () => {
@@ -247,16 +256,14 @@ test("parseAgents reads the agent array out of the CLI envelope", () => {
           agent: "pi",
           terminal_id: "a".repeat(32),
           name: "pipi",
-          status: "idle",
-          workspace_name: "pi-luvus",
+          workspace: "3",
         },
         {
           pane: "10",
           agent: "claude",
           terminal_id: null,
           name: null,
-          status: "working",
-          workspace_name: "mbv",
+          workspace: "2",
         },
         { pane: "11" }, // no agent kind: dropped
       ],
@@ -264,10 +271,10 @@ test("parseAgents reads the agent array out of the CLI envelope", () => {
   });
   const agents = parseAgents(stdout);
   assert.deepEqual(
-    agents.map((a) => [a.pane, a.agent, a.terminal_id, a.name]),
+    agents.map((a) => [a.pane, a.agent, a.terminal_id, a.name, a.workspace]),
     [
-      ["9", "pi", "a".repeat(32), "pipi"],
-      ["10", "claude", null, null],
+      ["9", "pi", "a".repeat(32), "pipi", "3"],
+      ["10", "claude", null, null, "2"],
     ],
   );
 });
@@ -287,6 +294,28 @@ test("parseAgents returns no agents for other shapes, nulls, and garbage", () =>
   assert.deepEqual(parseAgents("null"), []);
   assert.deepEqual(parseAgents(JSON.stringify({ result: { agents: [null, 5] } })), []);
   assert.deepEqual(parseAgents(JSON.stringify({ other: true })), []);
+});
+
+/** Two agents in different workspaces, for the workspace filter (design D11). */
+function twoWorkspaceAgents(): AgentInfo[] {
+  return [
+    { pane: "9", agent: "pi", terminal_id: null, name: null, workspace: "3" },
+    { pane: "6", agent: "claude", terminal_id: null, name: null, workspace: "2" },
+  ];
+}
+
+test("agentsInWorkspace keeps only agents in the focused workspace", () => {
+  assert.deepEqual(
+    agentsInWorkspace(twoWorkspaceAgents(), "3").map((a) => a.pane),
+    ["9"],
+  );
+});
+
+test("agentsInWorkspace keeps every agent when the workspace is unknown", () => {
+  assert.deepEqual(
+    agentsInWorkspace(twoWorkspaceAgents(), "").map((a) => a.pane),
+    ["9", "6"],
+  );
 });
 
 /** A fake `luvus` binary whose `agent list` prints the given JSON. */

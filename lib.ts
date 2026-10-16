@@ -122,6 +122,28 @@ export function writeExpanded(dir: string, expanded: Iterable<string>): void {
   renameSync(`${file}.tmp`, file);
 }
 
+/**
+ * The selected prompt relpath (design D9), or null when nothing is selected.
+ * The dock has no selection of its own, so the module keeps it. A missing or
+ * corrupt file means "nothing selected".
+ */
+export function readSelected(dir: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path.join(dir, "selected.json"), "utf8"));
+    return typeof parsed === "string" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeSelected(dir: string, rel: string): void {
+  mkdirSync(dir, { recursive: true });
+  // Temp file + rename, for the same reason as the expanded set.
+  const file = path.join(dir, "selected.json");
+  writeFileSync(`${file}.tmp`, `${JSON.stringify(rel, null, 2)}\n`);
+  renameSync(`${file}.tmp`, file);
+}
+
 /** One agent as `luvus agent list` reports it: the fields the module needs. */
 export interface AgentInfo {
   pane: string;
@@ -130,8 +152,8 @@ export interface AgentInfo {
   terminal_id: string | null;
   /** The live alias, or null when the agent has none. */
   name: string | null;
-  status: string;
-  workspace_name: string;
+  /** The id of the workspace that holds the pane, as `agent list` reports it. */
+  workspace: string;
 }
 
 /**
@@ -158,8 +180,7 @@ export function parseAgents(stdout: string): AgentInfo[] {
       agent: a.agent,
       terminal_id: typeof a.terminal_id === "string" ? a.terminal_id : null,
       name: typeof a.name === "string" ? a.name : null,
-      status: typeof a.status === "string" ? a.status : "",
-      workspace_name: typeof a.workspace_name === "string" ? a.workspace_name : "",
+      workspace: typeof a.workspace === "string" ? a.workspace : "",
     });
   }
   return agents;
@@ -172,6 +193,21 @@ export function parseAgents(stdout: string): AgentInfo[] {
 export function listAgents(): AgentInfo[] {
   const res = luvus(["agent", "list"]);
   return res.status === 0 ? parseAgents(res.stdout) : [];
+}
+
+/** The focused workspace id, as luvus injects it (`LUVUS_WORKSPACE_ID`, design D11). */
+export function currentWorkspaceId(): string {
+  return process.env.LUVUS_WORKSPACE_ID ?? "";
+}
+
+/**
+ * The agents that belong to one workspace (design D11). An empty id keeps every
+ * agent: the id comes from the environment, and hiding every send target is a
+ * worse failure than showing too many.
+ */
+export function agentsInWorkspace(agents: readonly AgentInfo[], workspaceId: string): AgentInfo[] {
+  if (!workspaceId) return [...agents];
+  return agents.filter((a) => a.workspace === workspaceId);
 }
 
 /**
@@ -197,15 +233,14 @@ export function splitSendValue(value: string): [string, string, string] {
 }
 
 /**
- * The target label for menus and toasts (design D8):
- * `<name, or agent + " · pane " + pane> (<agent>) · <status> · <workspace>`.
- * When the agent has no alias the kind is already in the base, so the
- * parenthetical `(<agent>)` is left out.
+ * The target label for menus and toasts (design D8): `<name> (<agent>) · pane
+ * <pane>`, or `<agent> · pane <pane>` when the agent has no alias.
+ * The menu lists every live agent, so status and workspace are left out: the
+ * label stays short enough to read at a glance.
  */
 export function targetLabel(a: AgentInfo): string {
-  const base = a.name || `${a.agent} · pane ${a.pane}`;
-  const kind = a.name ? ` (${a.agent})` : "";
-  return `${base}${kind} · ${a.status} · ${a.workspace_name}`;
+  const base = a.name ? `${a.name} (${a.agent})` : a.agent;
+  return `${base} · pane ${a.pane}`;
 }
 
 /** One entry of the scanned tree, in dock-row order (spec: tree rows). */

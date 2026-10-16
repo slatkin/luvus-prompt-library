@@ -37,6 +37,8 @@ on = "pane.agent_status_changed"
 command = ["node", "refresh.ts"]
 
 # All actions run from dock rows and row menus; none take right-click contexts.
+# Left-click is select (a prompt) or toggle (a folder); opening a file is a row
+# menu choice, so it never competes with a plain click.
 # edit-inline and edit-external share edit.ts, which reads LUVUS_MODULE_ACTION_ID.
 [[actions]]
 id = "refresh"
@@ -47,6 +49,11 @@ command = ["node", "refresh.ts"]
 id = "toggle"
 title = "Expand or collapse folder"
 command = ["node", "toggle.ts"]
+
+[[actions]]
+id = "select"
+title = "Select prompt"
+command = ["node", "select.ts"]
 
 [[actions]]
 id = "edit-inline"

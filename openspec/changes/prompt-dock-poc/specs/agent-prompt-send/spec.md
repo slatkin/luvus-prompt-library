@@ -7,26 +7,30 @@ Lets the user send a stored prompt to a live luvus agent from the prompt dock. T
 ## ADDED Requirements
 
 ### Requirement: Agent send targets
-The right-click menu of each prompt row SHALL have one "Send to" entry for each live agent that luvus reports, across all workspaces and tabs. Panes with no detected agent SHALL NOT show as targets. When no agent is live, the menu SHALL have no "Send to" entries.
+The right-click menu of each prompt row SHALL have one "Send to" entry for each live agent that luvus reports in the focused workspace. Agents in any other workspace SHALL NOT appear. Panes with no detected agent SHALL NOT show as targets. When no agent is live in the focused workspace, the menu SHALL have no "Send to" entries. The "Send to" entries SHALL come before the row's other menu entries (spec: prompt-dock, row menu order).
 
-#### Scenario: Two live agents
-- **WHEN** luvus reports a `claude` agent and a `pi` agent, and the user right-clicks a prompt row
+#### Scenario: Two live agents in the focused workspace
+- **WHEN** luvus reports a `claude` agent and a `pi` agent in the focused workspace, and the user right-clicks a prompt row
 - **THEN** the menu has two "Send to" entries, one for each agent
 
+#### Scenario: An agent in another workspace
+- **WHEN** an agent runs in a workspace that is not the focused one
+- **THEN** no "Send to" entry names that agent
+
 #### Scenario: Shell pane is not a target
-- **WHEN** a pane runs a plain shell with no detected agent
+- **WHEN** a pane in the focused workspace runs a plain shell with no detected agent
 - **THEN** no "Send to" entry names that pane
 
 ### Requirement: Target labels
-Each "Send to" entry label SHALL name the agent by its alias when it has one, else by its kind and pane id. The label SHALL also show the agent's status and its workspace name.
+Each "Send to" entry label SHALL name the agent by its alias when it has one, else by its kind, and SHALL show the pane id. The label SHALL NOT show the agent's status or its workspace name.
 
 #### Scenario: Named agent
-- **WHEN** a `pi` agent has the alias `pipi`, its status is `idle` and its workspace is `pi-luvus`
-- **THEN** its entry label contains `pipi`, `pi`, `idle` and `pi-luvus`
+- **WHEN** a `pi` agent with the alias `pipi` is in pane `9`
+- **THEN** its entry label is `pipi (pi) · pane 9`
 
 #### Scenario: Unnamed agent
 - **WHEN** a `claude` agent in pane `118` has no alias
-- **THEN** its entry label contains `claude` and `118`
+- **THEN** its entry label is `claude · pane 118`
 
 ### Requirement: Send submits the prompt
 Selecting a "Send to" entry SHALL read the prompt file at that moment and give its full text to the selected agent as one prompt, then submit it. The text SHALL keep its newlines. Edits saved to the file after the last dock repaint SHALL be included.
@@ -58,8 +62,12 @@ When luvus rejects a send (for example, the agent is not ready for input, the ta
 - **THEN** a toast names `plan` and `pipi`
 
 ### Requirement: Target list stays current
-The set of "Send to" entries SHALL be rebuilt when a workspace or pane is created or closed and when an agent's status changes, so an agent that starts in an existing pane appears without a manual refresh.
+The set of "Send to" entries SHALL be rebuilt when a workspace or pane is created or closed and when an agent's status changes, so an agent that starts in an existing pane appears without a manual refresh. The focused workspace SHALL be read again on each repaint.
 
 #### Scenario: Agent starts in an existing shell
 - **WHEN** the user starts `claude` in a shell pane that was already open
 - **THEN** after luvus detects the agent, prompt row menus include that agent
+
+#### Scenario: Workspace switch
+- **WHEN** the user switches to another workspace and the dock repaints
+- **THEN** the menu lists only the agents of the workspace the user is in

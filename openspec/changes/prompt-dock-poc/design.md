@@ -4,8 +4,8 @@
 
 See proposal.md for motivation and specs/ for the behavior contract. Facts verified against luvus 0.14.3 (source at `~/Dev/luvus`):
 
-- Modules run argv commands from `luvus-module.toml`. Docks are flat row lists pushed with `ui dock push` (JSON on stdin). A row has `text`, `dot`, `tone`, `action`, `value` and a per-row `menu` of `{title, action, value}`. Clicked rows get `LUVUS_MODULE_ROW_VALUE`, and menu entries override it with their own `value`. `LUVUS_BIN_PATH` names the luvus binary.
-- `luvus agent list` returns only agents. Each has `pane`, `terminal_id` (32 hex chars), `agent`, `name`, `status`, `workspace_name`, `project`.
+- Modules run argv commands from `luvus-module.toml`. Docks are flat row lists pushed with `ui dock push` (JSON on stdin). A row has `text`, `dot`, `tone`, `spans`, `action`, `value` and a per-row `menu` of `{title, action, value}`. A row does at most one thing on a left-click, and **a row has no selection state of its own**; `spans` is drawn instead of `text`, while `text` stays the plain label the action receives. Clicked rows get `LUVUS_MODULE_ROW_VALUE`, and menu entries override it with their own `value`. `LUVUS_BIN_PATH` names the luvus binary. A dock can be placed left, right or off and resized, but **not reordered**, so a module cannot put its own dock at the top of a sidebar.
+- `luvus agent list` returns only agents. Each has `pane`, `terminal_id` (32 hex chars), `agent`, `name`, `workspace` (the numeric focused-workspace id), `workspace_name`, `project`.
 - `luvus agent prompt <target> <text> --terminal-id <id>` pastes and submits in one atomic request (`agent.prompt`). It refuses with `agent_not_ready` and queues nothing when the agent has no prompt-ready composer (`src/app/dispatch/agent_workflow.rs:137`).
 - `luvus pane split --no-focus` returns `{"pane": "<id>", ...}`. `luvus pane run <id> <cmd>` *types* `cmd` + Enter into the pane's shell (`src/app/dispatch/topology.rs:258`). It is not an exec.
 - `luvus files open` opens a read-only file view, not the configured editor, so it does not meet the inline-edit requirement.
@@ -33,8 +33,9 @@ See proposal.md for motivation and specs/ for the behavior contract. Facts verif
 
 ### D3: Row and menu `value` encoding
 - Folder row: `action: "toggle"`, `value: "<relpath>"`.
-- Prompt row: `action: "edit-inline"`, `value: "<relpath>"`.
-- Menu entry "Open in zed/VS Code": `action: "edit-external"`, `value: "zed|<relpath>"` / `"code|<relpath>"`.
+- Prompt row: `action: "select"`, `value: "<relpath>"` (design D9).
+- Menu entry `Open`: `action: "edit-inline"`, `value: "<relpath>"`.
+- Menu entry "Edit in zed/VS Code": `action: "edit-external"`, `value: "zed|<relpath>"` / `"code|<relpath>"`.
 - Menu entry "Send to …": `action: "send"`, `value: "<pane>|<terminal_id>|<relpath>"`.
 
 Split each value on the first one or two `|` only, so a `|` in a file name still works. Paths are relative to `root` and resolved again at action time, so a change to the `root` setting cannot point an old row at a file outside the new root. Reject any relpath that resolves outside `root`.
@@ -54,16 +55,29 @@ Alternative: `files open`. Rejected, it is read-only (Context).
 Use `spawn(editor, [absPath], {detached: true, stdio: "ignore"}).unref()`. Probe PATH at refresh time with a stdlib PATH scan (split `PATH`, check that the file exists, add `PATHEXT` on Windows), not `which`, to keep zero dependencies and Windows support.
 
 ### D8: Target labels
-`<name ?? agent+" · pane "+pane> (<agent>) · <status> · <workspace_name>`. When `name` is null, the kind is already in the label, so leave out the `(<agent>)` part.
+`<name> (<agent>) · pane <pane>`, or `<agent> · pane <pane>` when `name` is null. Short by decision: the menu holds one entry per live agent, so status and workspace_name are left out and the parsed agent no longer carries them.
+
+### D9: Left-click selects; opening is a menu choice
+The dock has no selection state, so `select.ts` keeps it in `LUVUS_MODULE_STATE_DIR/selected.json` (a JSON string, or absent for no selection) and then repaints. The selected prompt is drawn with `spans` — an accent `▌ ` marker plus the accent-tone name — so `text` stays the plain label that the row action reads.
+Alternative: keep `edit-inline` on the left-click and add selection later. Rejected: a stray click pulls focus into a new editor pane, which is the behaviour this rework removes.
+
+### D10: Row tones and the pushed title
+Folders take `tone: "accent"`; prompts keep the default row colour; the selected prompt takes accent plus its marker (D9). `refresh.ts` pushes `--title PROMPTS` on every push, because a push without a title leaves luvus titling the dock from its id.
+
+### D11: Send targets come from the focused workspace
+The context maps `LUVUS_WORKSPACE_ID` to `workspace.id` (`src/module/context.rs:157`), which is the focused workspace for CLI, socket, startup and event invocations — the same numeric id `agent list` reports as `workspace`. `refresh.ts` therefore keeps the agents whose id matches. Verified live: a `module run` probe reported `LUVUS_WORKSPACE_ID=3` for pane 12 in workspace 3.
+An unset or empty id keeps every agent: the module then cannot tell which workspace is focused, and hiding every send target is the worse failure of the two.
 
 ## Risks / Trade-offs
 
 - [`pane run` types into a shell, so paths need quoting] → single-quote the path, and refuse (with a toast) paths that contain `'`. This works in sh/bash/zsh/fish. PowerShell needs `''` escaping, which is a known gap and is noted in the roadmap issue.
 - [The editor pane stays as a shell after the editor quits] → acceptable for the PoC.
-- [A prompt that begins with `--` is read as an option by `agent prompt`] → shows as a send-failure toast. The roadmap issue tracks the stdin path through `uhp proxy`.
+- [A prompt that begins with `-` is read as an option by `agent prompt`] → fixed: `send.ts` passes the text after a `--` separator, so leading `---` frontmatter and bullet lines arrive as literal text. The roadmap issue still covers the stdin path through `uhp proxy`.
 - [argv size limit, about 32 K chars on Windows and 128 KB per argument on Linux] → the same roadmap item.
 - [`pane.agent_status_changed` fires often (working ↔ idle), and each one rescans the tree] → acceptable for small libraries. If it gets slow, cache the tree scan in the state dir.
-- [Menus built at refresh show stale status text] → cosmetic only. Delivery safety comes from D4.
+- [Luvus fires no event on a workspace switch] → the send list is built at repaint time, so after a switch the menu keeps the previous workspace's agents until the next repaint: a pane opened or closed, an agent status change, or any dock click (toggle, select and refresh all repaint).
+- [The focused workspace cannot be determined] → every agent is listed (D11), rather than no agent.
+- [Menus built at refresh can go stale] → cosmetic only, and the labels no longer carry status (D8). Delivery safety comes from D4.
 
 ## Migration Plan
 

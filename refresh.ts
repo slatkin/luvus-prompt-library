@@ -5,6 +5,8 @@
 import { statSync } from "node:fs";
 
 import {
+  agentsInWorkspace,
+  currentWorkspaceId,
   encodeSendValue,
   findOnPath,
   isMain,
@@ -12,6 +14,7 @@ import {
   luvus,
   moduleStateDir,
   readExpanded,
+  readSelected,
   scanTree,
   settingRoot,
   targetLabel,
@@ -20,12 +23,24 @@ import {
 } from "./lib.ts";
 
 const DOCK_ID = "prompts";
+const DOCK_TITLE = "PROMPTS";
 const INDENT = "  ";
+// The selected row carries a marker as well as the accent tone, so the selection
+// is still visible in a theme where accent sits close to the default text colour.
+const SELECTED_MARK = "▌ ";
+
+/** One segment of a row drawn from parts instead of plain `text` (docks API). */
+interface DockSpan {
+  text: string;
+  tone?: string;
+}
 
 /** One row as `ui dock push` accepts it (JSON on stdin). */
 interface DockRow {
   text: string;
   tone?: string;
+  /** Drawn instead of `text` when present; `text` stays the plain label. */
+  spans?: DockSpan[];
   action?: string;
   value?: string;
   menu?: DockMenuEntry[];
@@ -40,27 +55,29 @@ interface DockMenuEntry {
 
 interface Editor {
   bin: string;
-  title: string;
+  /** The editor's name, for the menu entry label. */
+  label: string;
 }
 
 /** The external editors found on PATH; a refresh checks this once. */
 function availableEditors(): Editor[] {
   return [
-    { bin: "zed", title: "Open in zed" },
-    { bin: "code", title: "Open in VS Code" },
+    { bin: "zed", label: "zed" },
+    { bin: "code", label: "VS Code" },
   ].filter((e) => findOnPath(e.bin));
 }
 
 /**
- * External editor entries for a prompt row, shown only when the binary is
- * actually on PATH (design D7, spec: external editors).
+ * The "Edit" entries for a prompt row: one per external editor on PATH
+ * (design D7, spec: external editors). "Open" is the inline editor and is
+ * built in `toDockRow`; these entries are the detached applications.
  */
-export function editorMenuEntries(
+export function editMenuEntries(
   rel: string,
   editors: readonly Editor[] = availableEditors(),
 ): DockMenuEntry[] {
   return editors.map((e) => ({
-    title: e.title,
+    title: `Edit in ${e.label}`,
     action: "edit-external",
     value: `${e.bin}|${rel}`,
   }));
@@ -91,22 +108,28 @@ function isFolder(p: string): boolean {
 }
 
 /** Build the dock rows for `root`: the tree, or the missing-root row. */
-function buildRows(root: string, expanded: ReadonlySet<string>): DockRow[] {
+function buildRows(
+  root: string,
+  expanded: ReadonlySet<string>,
+  selected: string | null,
+): DockRow[] {
   if (!isFolder(root)) {
     // Spec: missing root — one muted row that names the folder, no other rows.
     return [{ text: `root not found: ${root}`, tone: "muted" }];
   }
-  // Agents and editors don't change between rows: look them up once.
+  // Agents and editors don't change between rows: look them up once. Only the
+  // focused workspace's agents are offered (design D11).
   const editors = availableEditors();
-  const agents = listAgents();
+  const agents = agentsInWorkspace(listAgents(), currentWorkspaceId());
   return scanTree(root, expanded).map((row) =>
-    toDockRow(row, expanded.has(row.rel), editors, agents),
+    toDockRow(row, expanded.has(row.rel), row.rel === selected, editors, agents),
   );
 }
 
 function toDockRow(
   row: TreeRow,
   isExpanded: boolean,
+  isSelected: boolean,
   editors: readonly Editor[],
   agents: readonly AgentInfo[],
 ): DockRow {
@@ -114,24 +137,42 @@ function toDockRow(
   if (row.kind === "folder") {
     return {
       text: `${indent}${isExpanded ? "▾" : "▸"} ${row.name}`,
+      // Folders take the accent tone, so they read differently from prompts.
+      tone: "accent",
       action: "toggle",
       value: row.rel,
     };
   }
-  return {
+  // A left-click only selects (design D9): opening a file is a menu choice, so a
+  // stray click cannot pull focus into a new editor pane.
+  const dockRow: DockRow = {
     text: `${indent}${row.name}`,
-    action: "edit-inline",
+    action: "select",
     value: row.rel,
-    menu: [...editorMenuEntries(row.rel, editors), ...sendMenuEntries(row.rel, agents)],
+    // Send targets first: they are the common action, and the menu reads top-down.
+    menu: [
+      ...sendMenuEntries(row.rel, agents),
+      { title: "Open", action: "edit-inline", value: row.rel },
+      ...editMenuEntries(row.rel, editors),
+    ],
   };
+  if (isSelected) {
+    // Keep `text` plain (actions read it) and draw the highlight in `spans`.
+    dockRow.spans = [
+      { text: `${indent}${SELECTED_MARK}`, tone: "accent" },
+      { text: row.name, tone: "accent" },
+    ];
+  }
+  return dockRow;
 }
 
 /** Scan the configured root and push the rows into the `prompts` dock. */
 export function refreshDock(): void {
   const root = settingRoot();
-  const expanded = readExpanded(moduleStateDir());
-  const rows = buildRows(root, expanded);
-  const res = luvus(["ui", "dock", "push", "--id", DOCK_ID], {
+  const dir = moduleStateDir();
+  const rows = buildRows(root, readExpanded(dir), readSelected(dir));
+  // Push the title too: without one, luvus titles the dock from its id.
+  const res = luvus(["ui", "dock", "push", "--id", DOCK_ID, "--title", DOCK_TITLE], {
     input: JSON.stringify(rows),
   });
   if (res.status !== 0) {

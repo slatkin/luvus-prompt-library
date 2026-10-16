@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Shows a folder tree of markdown prompt files in a luvus sidebar dock and lets the user open each prompt in an inline or external editor.
+Shows a folder tree of markdown prompt files in a luvus sidebar dock. A left-click selects a prompt; opening, editing and sending are choices in the row's right-click menu.
 
 ## ADDED Requirements
 
@@ -39,27 +39,59 @@ Clicking a folder row SHALL toggle it between expanded and collapsed. The childr
 - **WHEN** `review` is expanded and luvus restarts
 - **THEN** the dock repaints with `review` still expanded
 
-### Requirement: Inline edit
-Clicking a prompt row SHALL open that file in a new split pane, without moving focus, in the editor set in luvus "Open files with" (`layout.file_open`). When that setting is empty, `readonly` or not readable, the module SHALL use `nvim`.
+### Requirement: Open in the editor pane
+The right-click menu of a prompt row SHALL have an `Open` entry. Selecting it SHALL open that file in a new split pane, without moving focus, in the editor set in luvus "Open files with" (`layout.file_open`). When that setting is empty, `readonly` or not readable, the module SHALL use `nvim`. A left-click on a prompt row SHALL NOT open the file.
 
 #### Scenario: Configured editor
-- **WHEN** `layout.file_open` is `hx` and the user clicks the prompt row `plan`
+- **WHEN** `layout.file_open` is `hx` and the user picks `Open` on the prompt row `plan`
 - **THEN** a new pane opens and runs `hx` on `<root>/plan.md`
 
 #### Scenario: Fallback editor
-- **WHEN** `layout.file_open` is `readonly` and the user clicks a prompt row
+- **WHEN** `layout.file_open` is `readonly` and the user picks `Open` on a prompt row
 - **THEN** the new pane runs `nvim` on that file
 
 ### Requirement: External editors
-The right-click menu of a prompt row SHALL have "Open in zed" and "Open in VS Code" entries only when `zed` and `code` are on PATH. Selecting one SHALL start that editor on the file, detached, and the action SHALL exit without waiting for the editor.
+The right-click menu of a prompt row SHALL have an "Edit in zed" entry only when `zed` is on PATH, and an "Edit in VS Code" entry only when `code` is on PATH. Selecting one SHALL start that editor on the file, detached, and the action SHALL exit without waiting for the editor.
 
 #### Scenario: Editor not installed
 - **WHEN** `code` is not on PATH
-- **THEN** the prompt row menu has no "Open in VS Code" entry
+- **THEN** the prompt row menu has no "Edit in VS Code" entry
 
 #### Scenario: Detached launch
-- **WHEN** the user selects "Open in zed"
+- **WHEN** the user selects "Edit in zed"
 - **THEN** zed opens the file and the module action finishes at once
+
+### Requirement: Select a prompt
+A left-click on a prompt row SHALL select that prompt and SHALL NOT open it. The selected row SHALL be drawn in the accent tone with a `▌` marker before its name. The selection SHALL persist across luvus restarts. A prompt that is no longer in the library SHALL NOT draw as selected.
+
+#### Scenario: Left-click selects
+- **WHEN** the user left-clicks the prompt row `plan`
+- **THEN** `plan` is drawn with the marker, no pane is created, and no editor starts
+
+#### Scenario: Selection survives restart
+- **WHEN** `plan` is selected and luvus restarts
+- **THEN** the dock repaints with `plan` still drawn as selected
+
+### Requirement: Row colours
+Folder rows SHALL use the accent tone. Prompt rows SHALL use the default row colour, except a selected prompt row, which SHALL use the accent tone with its marker.
+
+#### Scenario: Folders are distinct from prompts
+- **WHEN** the dock shows a folder row and a prompt row
+- **THEN** the folder is drawn in the accent tone and the prompt in the default colour
+
+### Requirement: Row menu order
+The right-click menu of a prompt row SHALL list the "Send to" entries first, then the `Open` entry, then the external-editor entries.
+
+#### Scenario: Menu order
+- **WHEN** one agent is live and `zed` and `code` are on PATH
+- **THEN** the menu lists the "Send to" entry, then `Open`, then "Edit in zed", then "Edit in VS Code"
+
+### Requirement: Dock header
+The dock header SHALL read `PROMPTS`.
+
+#### Scenario: Header case
+- **WHEN** the dock paints after a restart or a refresh
+- **THEN** its header reads `PROMPTS`
 
 ### Requirement: Dock refresh
 The dock SHALL repaint on luvus startup and when the user runs the `refresh` action. A repaint SHALL show files that were added or removed since the last repaint.
