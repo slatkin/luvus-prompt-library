@@ -73,9 +73,16 @@ force one.
 
 ## Requirements
 
-- **Node >= 23.6** — the module scripts are TypeScript run directly by
-  `node` (type stripping); the module needs no npm dependencies to run.
-  (The dev tooling for lint/format/CI gates uses devDependencies only.)
+- **Go 1.22 or newer** — the module is one Go binary, `prompt-dock`, built
+  with `go install` from this checkout. Go is needed only at install time; the
+  binary itself has no runtime dependencies and uses the Go standard library
+  only. There is no Node and no npm.
+- **`GOBIN` on the `PATH` that luvus sees** — `go install` writes the binary to
+  `GOBIN` (`~/go/bin` by default), and luvus starts the module by name from
+  `PATH`. If luvus starts from a desktop launcher, its `PATH` may differ from
+  your shell's; make sure the folder holds `prompt-dock` for that `PATH` too.
+  Check with `command -v prompt-dock`. If it is missing, every dock action
+  fails with a spawn error that names `prompt-dock`.
 - **luvus >= 0.14.3** — needs `luvus agent list` with terminal ids and
   `luvus agent prompt --terminal-id`.
 - **A Nerd Font in your terminal** — the dock prefixes each row with a Material
@@ -84,6 +91,9 @@ force one.
 - Your agent must be running inside luvus so it appears in
   `luvus agent list`.
 
+Linux is the tested platform. The code compiles for Windows, but Windows is
+untested.
+
 ## Install
 
 Point luvus at a checkout of this repo using the **absolute path**:
@@ -91,14 +101,22 @@ Point luvus at a checkout of this repo using the **absolute path**:
 ```sh
 git clone https://github.com/slatkin/luvus-prompt-library
 cd luvus-prompt-library
+go install ./cmd/prompt-dock
+command -v prompt-dock   # must print a path
 luvus module link "$(pwd)"
 ```
 
 > Use the absolute path. `luvus module link .` failed in earlier testing —
 > always link with a full path.
 
-For development, run `npm install` once in the checkout. Its `prepare` script
-points git at the pre-commit hook in `.githooks`.
+Run `go install ./cmd/prompt-dock` again after each `git pull`: the linked
+checkout and the installed binary can differ in version until you rebuild.
+
+For development, set up the pre-commit hook once in the checkout:
+
+```sh
+git config core.hooksPath .githooks
+```
 
 Then restart luvus. The **PROMPTS** dock appears in the left sidebar (you
 can move it in Settings → Layout).
