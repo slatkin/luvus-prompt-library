@@ -32,7 +32,7 @@
 
 - [x] 7.1 Delete `lib.ts`, `refresh.ts`, `toggle.ts`, `select.ts`, `edit.ts`, `send.ts`, `lib.test.ts`, `package.json`, `package-lock.json`, `tsconfig.json`, `eslint.config.js`, `.prettierrc.json`, and `.prettierignore`, and remove `node_modules/` from `.gitignore`. Verify: `git ls-files '*.ts' package.json` prints nothing, and `go test ./...` still passes.
 - [x] 7.2 Rewrite `.githooks/pre-commit` to run `gofmt -l .` (fail on any output), `go vet ./...`, and `go test ./...` in the same quiet style. Verify: a commit with a badly formatted Go file is refused, and a clean commit passes.
-- [ ] 7.3 Rewrite `.github/workflows/ci.yml` for `ubuntu-latest` only, with `actions/setup-go` pinned by commit SHA with a version comment, `go-version-file: go.mod`, and the three gates. Verify: CI is green for the pushed branch.
+- [x] 7.3 Rewrite `.github/workflows/ci.yml` for `ubuntu-latest` only, with `actions/setup-go` pinned by commit SHA with a version comment, `go-version-file: go.mod`, and the three gates. Verify: CI is green for the pushed branch.
 
 ## Workflow follow-up
 
