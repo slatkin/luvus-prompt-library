@@ -26,9 +26,9 @@ const branchLast = "└─ "
 // Row prefixes, written as escapes so the codepoints stay exact and reviewable.
 // These are Nerd Font glyphs (Material Design set), so the terminal needs a Nerd
 // Font — the same assumption luvus's own web client makes in its font stack.
-const promptGlyph = "\uF0B79" // md-chat
-const folderGlyph = "\uF024B" // md-folder
-const folderOpenGlyph = "\uF0770"
+const promptGlyph = "\U000F0B79" // md-chat
+const folderGlyph = "\U000F024B" // md-folder
+const folderOpenGlyph = "\U000F0770"
 
 // DockRow is one row as `ui dock push` accepts it (JSON on stdin).
 type DockRow struct {

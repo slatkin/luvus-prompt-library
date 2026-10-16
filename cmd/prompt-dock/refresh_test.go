@@ -22,6 +22,52 @@ func skipOnWindows(t *testing.T) {
 	}
 }
 
+// fixedAgentReply is the `agent list` reply the golden rows were recorded
+// with (task 3.2): one live agent in workspace 3.
+const fixedAgentReply = `{"id":"1","result":{"agents":[{"pane":"9","agent":"pi","terminal_id":"cccccccccccccccccccccccccccccccc","name":"pipi","status":"idle","workspace_name":"pi-luvus","workspace":"3"}]}}`
+
+// TestBuildRowsMatchesTheGoldenRowsFromTheTSRefresh replays the golden check
+// of task 3.2: refresh.ts, run against a fixed library (the tempLibrary
+// fixture), state (one expanded folder, plan.md selected), editor list [zed],
+// and agent list, pushed the rows in testdata/refresh-golden.json. The Go
+// buildRows must decode to the same rows. The check compares the decoded
+// JSON, not the bytes, because Go escapes `<`, `>`, and `&` differently
+// (design D16).
+func TestBuildRowsMatchesTheGoldenRowsFromTheTSRefresh(t *testing.T) {
+	root := tempLibrary(t)
+	dir := t.TempDir()
+	// The state files in the format the TS code writes (design D14).
+	if err := os.WriteFile(filepath.Join(dir, "expanded.json"), []byte("[\n  \"review\"\n]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "selected.json"), []byte("\"plan.md\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	rows := buildRows(root, readExpanded(dir), readSelected(dir),
+		[]Editor{{Bin: "zed", Label: "zed"}}, parseAgents(fixedAgentReply))
+
+	goldenRaw, err := os.ReadFile(filepath.Join("testdata", "refresh-golden.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var golden []any
+	if err := json.Unmarshal(goldenRaw, &golden); err != nil {
+		t.Fatalf("golden file does not decode: %v", err)
+	}
+	encoded, err := json.Marshal(rows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded []any
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatalf("built rows do not decode: %v", err)
+	}
+	if !reflect.DeepEqual(golden, decoded) {
+		t.Errorf("built rows differ from the golden rows\n built: %s\n golden: %s", encoded, goldenRaw)
+	}
+}
+
 func TestBranchPrefixesChildrenOfATopLevelFolderDrawNoPipe(t *testing.T) {
 	root := tempLibrary(t)
 	rows := scanTree(root, map[string]bool{"review": true})
@@ -86,28 +132,28 @@ func TestToDockRowOnlyTheGlyphAndNameTakeAToneNeverTheBranchPrefix(t *testing.T)
 	prompt := TreeRow{Rel: "a/b.md", Name: "b", Depth: 1, Kind: "file", IsLast: true}
 	// Not selected: no span has a tone, so the whole row takes the default colour.
 	plain := toDockRow(prompt, "  └─ ", false, false, nil, nil)
-	if want := "  └─ \uF0B79 b"; plain.Text != want {
+	if want := "  └─ \U000F0B79 b"; plain.Text != want {
 		t.Errorf("plain.Text = %q, want %q", plain.Text, want)
 	}
-	wantSpans := []DockSpan{{Text: "  └─ "}, {Text: "\uF0B79 b"}}
+	wantSpans := []DockSpan{{Text: "  └─ "}, {Text: "\U000F0B79 b"}}
 	if !reflect.DeepEqual(plain.Spans, wantSpans) {
 		t.Errorf("plain.Spans = %+v, want %+v", plain.Spans, wantSpans)
 	}
 	// Selected: the accent sits on the glyph and name, and the prefix keeps none.
 	selected := toDockRow(prompt, "  └─ ", false, true, nil, nil)
-	wantSelected := []DockSpan{{Text: "  └─ "}, {Text: "\uF0B79 b", Tone: "accent"}}
+	wantSelected := []DockSpan{{Text: "  └─ "}, {Text: "\U000F0B79 b", Tone: "accent"}}
 	if !reflect.DeepEqual(selected.Spans, wantSelected) {
 		t.Errorf("selected.Spans = %+v, want %+v", selected.Spans, wantSelected)
 	}
 	// A folder label is accent too, and a root row sends no prefix span at all.
 	folder := TreeRow{Rel: "a", Name: "a", Kind: "folder"}
 	collapsed := toDockRow(folder, "", false, false, nil, nil)
-	wantFolder := []DockSpan{{Text: "\uF024B a", Tone: "accent"}}
+	wantFolder := []DockSpan{{Text: "\U000F024B a", Tone: "accent"}}
 	if !reflect.DeepEqual(collapsed.Spans, wantFolder) {
 		t.Errorf("collapsed folder spans = %+v, want %+v", collapsed.Spans, wantFolder)
 	}
 	open := toDockRow(folder, "", true, false, nil, nil)
-	wantOpen := []DockSpan{{Text: "\uF0770 a", Tone: "accent"}}
+	wantOpen := []DockSpan{{Text: "\U000F0770 a", Tone: "accent"}}
 	if !reflect.DeepEqual(open.Spans, wantOpen) {
 		t.Errorf("open folder spans = %+v, want %+v", open.Spans, wantOpen)
 	}

@@ -1,0 +1,53 @@
+[
+  {
+    "text": "󰝰 review",
+    "spans": [{ "text": "󰝰 review", "tone": "accent" }],
+    "action": "toggle",
+    "value": "review"
+  },
+  {
+    "text": "  ├─ 󰭹 rust",
+    "spans": [{ "text": "  ├─ " }, { "text": "󰭹 rust" }],
+    "action": "select",
+    "value": "review/rust.md",
+    "menu": [
+      {
+        "title": "Send to pipi (pi) · pane 9",
+        "action": "send",
+        "value": "9|cccccccccccccccccccccccccccccccc|review/rust.md"
+      },
+      { "title": "Open", "action": "edit-inline", "value": "review/rust.md" },
+      { "title": "Edit in zed", "action": "edit-external", "value": "zed|review/rust.md" }
+    ]
+  },
+  {
+    "text": "  └─ 󰭹 ts",
+    "spans": [{ "text": "  └─ " }, { "text": "󰭹 ts" }],
+    "action": "select",
+    "value": "review/ts.md",
+    "menu": [
+      {
+        "title": "Send to pipi (pi) · pane 9",
+        "action": "send",
+        "value": "9|cccccccccccccccccccccccccccccccc|review/ts.md"
+      },
+      { "title": "Open", "action": "edit-inline", "value": "review/ts.md" },
+      { "title": "Edit in zed", "action": "edit-external", "value": "zed|review/ts.md" }
+    ]
+  },
+  {
+    "text": "󰭹 plan",
+    "spans": [{ "text": "󰭹 plan", "tone": "accent" }],
+    "action": "select",
+    "value": "plan.md",
+    "menu": [
+      {
+        "title": "Send to pipi (pi) · pane 9",
+        "action": "send",
+        "value": "9|cccccccccccccccccccccccccccccccc|plan.md"
+      },
+      { "title": "Open", "action": "edit-inline", "value": "plan.md" },
+      { "title": "Edit in zed", "action": "edit-external", "value": "zed|plan.md" }
+    ]
+  }
+]
