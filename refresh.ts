@@ -28,6 +28,10 @@ const DOCK_TITLE = "PROMPTS";
 // glyph, so a three-space step puts every child one space right of its parent's
 // name; a two-space step puts the child flush under that name instead.
 const INDENT = "   ";
+// `ui dock push` draws a row's dot as "<dot> " before its text, so a dotted row
+// starts two columns further right. A selected row drops those columns from its
+// indent instead, and its name keeps the column its siblings use.
+const DOT_PREFIX_WIDTH = 2;
 // The dot on the selected row. A module dock row can set a status dot and a tone,
 // but not bold or a row background, so the accent tone plus a filled dot is the
 // closest a module gets to the focused row of the built-in docks.
@@ -131,16 +135,17 @@ function toDockRow(
   editors: readonly Editor[],
   agents: readonly AgentInfo[],
 ): DockRow {
-  const indent = INDENT.repeat(row.depth);
+  const baseIndent = INDENT.repeat(row.depth);
   if (row.kind === "folder") {
     return {
-      text: `${indent}${isExpanded ? "▾" : "▸"} ${row.name}`,
+      text: `${baseIndent}${isExpanded ? "▾" : "▸"} ${row.name}`,
       // Folders take the accent tone, so they read differently from prompts.
       tone: "accent",
       action: "toggle",
       value: row.rel,
     };
   }
+  const indent = isSelected ? baseIndent.slice(DOT_PREFIX_WIDTH) : baseIndent;
   // A left-click only selects (design D9): opening a file is a menu choice, so a
   // stray click cannot pull focus into a new editor pane.
   const dockRow: DockRow = {
