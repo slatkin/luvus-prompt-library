@@ -6,7 +6,7 @@
 
 ## 2. Shared library (design D14)
 
-- [ ] 2.1 Port `lib.ts` to `cmd/prompt-dock/lib.go`: `luvus()`, `expandHome`, `resolveRoot`, `settingRoot`, `resolveUnderRoot`, `moduleStateDir`, the expanded and selected state files, `parseAgents`, `listAgents`, `currentWorkspaceId`, `agentsInWorkspace`, `encodeSendValue`, `splitSendValue`, `targetLabel`, `scanTree`, and `toast`. Use `exec.LookPath` instead of `findOnPath`. Keep the D-citations in the comments. Verify: the matching tests from `lib.test.ts`, ported to `lib_test.go` with the same names, pass with `go test ./...`. Add a test that an empty expanded set is written as `[]`, and a test that `expanded.json` and `selected.json` written by the TS code (fixture text) read back the same.
+- [x] 2.1 Port `lib.ts` to `cmd/prompt-dock/lib.go`: `luvus()`, `expandHome`, `resolveRoot`, `settingRoot`, `resolveUnderRoot`, `moduleStateDir`, the expanded and selected state files, `parseAgents`, `listAgents`, `currentWorkspaceId`, `agentsInWorkspace`, `encodeSendValue`, `splitSendValue`, `targetLabel`, `scanTree`, and `toast`. Use `exec.LookPath` instead of `findOnPath`. Keep the D-citations in the comments. Verify: the matching tests from `lib.test.ts`, ported to `lib_test.go` with the same names, pass with `go test ./...`. Add a test that an empty expanded set is written as `[]`, and a test that `expanded.json` and `selected.json` written by the TS code (fixture text) read back the same.
 
 ## 3. Dock rows (design D14, D16)
 
