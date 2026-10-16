@@ -13,11 +13,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
 const FALLBACK_EDITOR = "nvim"
+
+// externalEditors are the external editors refresh.go offers; anything else
+// is refused.
+var externalEditors = []string{"zed", "code"}
 
 // readRawFileOpen reads luvus "Open files with" from ~/.luvus/config.json
 // (design D6). Returns the raw setting value, or "" when the file is missing,
@@ -122,4 +127,52 @@ func paneIdFromSplit(stdout string) (string, bool) {
 	default:
 		return "", true // parsed, but no usable pane id
 	}
+}
+
+// splitExternalValue splits an edit-external row value on the FIRST `|` only
+// (design D3), so a `|` in a file name still works. Returns [editor, relpath].
+func splitExternalValue(value string) (string, string) {
+	sep := strings.Index(value, "|")
+	if sep == -1 {
+		return "", value
+	}
+	return value[:sep], value[sep+1:]
+}
+
+// editExternal starts the editor detached and finishes at once (design D7).
+func editExternal(value string) error {
+	editor, rel := splitExternalValue(value)
+	if editor == "" {
+		return fmt.Errorf("edit-external: malformed value (expected <editor>|<relpath>): %s", value)
+	}
+	known := false
+	for _, e := range externalEditors {
+		if e == editor {
+			known = true
+		}
+	}
+	if !known {
+		return fmt.Errorf("edit-external: unknown editor: %s", editor)
+	}
+
+	abs := resolveUnderRoot(settingRoot(), rel)
+	if abs == "" {
+		toast("That file is outside your prompt library root, so it can't be opened.")
+		return fmt.Errorf("edit-external: relpath escapes root: %s", rel)
+	}
+
+	// The TS code quoted the path and used shell:true on Windows because spawn
+	// could not run the `code.cmd` shim directly. exec.LookPath finds the .cmd
+	// shim on Windows, so that branch goes away (design D15).
+	// ponytail: cmd still parses the arguments of a batch file, so a path
+	// containing % or & can break.
+	cmd := exec.Command(editor, abs)
+	setDetach(cmd)
+	// A failed launch (e.g. binary vanished) must not crash the action.
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "edit-external: spawn error: %v\n", err)
+		toast(fmt.Sprintf("Couldn't start %s. Please try again.", editor))
+		return nil
+	}
+	return nil
 }

@@ -32,7 +32,13 @@ func runEditInline() error {
 
 // runEditExternal opens a prompt in a detached editor window (task 4.2). It
 // replaces the other LUVUS_MODULE_ACTION_ID branch of edit.ts.
-func runEditExternal() error { return notImplemented("edit-external") }
+func runEditExternal() error {
+	value := os.Getenv("LUVUS_MODULE_ROW_VALUE")
+	if value == "" {
+		return fmt.Errorf("edit-external: no row value (LUVUS_MODULE_ROW_VALUE unset)")
+	}
+	return editExternal(value)
+}
 
 // runSend sends a prompt to an agent pane (task 5.1).
 func runSend() error { return notImplemented("send") }
