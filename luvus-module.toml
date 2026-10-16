@@ -1,0 +1,70 @@
+id = "slatkin.prompt-dock"
+name = "Prompt Dock"
+version = "0.1.0"
+min_luvus_version = "0.14.3"
+description = "A sidebar dock for a hierarchical markdown prompt library: browse, edit, and send prompts to agents."
+
+# The dock luvus reserves for this module. The module fills it with `ui dock
+# push`; luvus owns the rendering and the user can move it from Settings -> Layout.
+[[docks]]
+id = "prompts"
+title = "PROMPTS"
+placement = "sidebar.left"
+
+# Repaint the dock after a restart (dock contents are not persisted).
+[[startup]]
+command = ["node", "refresh.ts"]
+
+# Keep the dock and its send targets fresh.
+[[events]]
+on = "workspace.created"
+command = ["node", "refresh.ts"]
+
+[[events]]
+on = "workspace.closed"
+command = ["node", "refresh.ts"]
+
+[[events]]
+on = "pane.created"
+command = ["node", "refresh.ts"]
+
+[[events]]
+on = "pane.closed"
+command = ["node", "refresh.ts"]
+
+[[events]]
+on = "pane.agent_status_changed"
+command = ["node", "refresh.ts"]
+
+# All actions run from dock rows and row menus; none take right-click contexts.
+# edit-inline and edit-external share edit.ts, which reads LUVUS_MODULE_ACTION_ID.
+[[actions]]
+id = "refresh"
+title = "Refresh prompts"
+command = ["node", "refresh.ts"]
+
+[[actions]]
+id = "toggle"
+title = "Expand or collapse folder"
+command = ["node", "toggle.ts"]
+
+[[actions]]
+id = "edit-inline"
+title = "Edit prompt inline"
+command = ["node", "edit.ts"]
+
+[[actions]]
+id = "edit-external"
+title = "Edit prompt in external editor"
+command = ["node", "edit.ts"]
+
+[[actions]]
+id = "send"
+title = "Send prompt to agent"
+command = ["node", "send.ts"]
+
+[[settings]]
+key = "root"
+title = "Prompt library root"
+type = "string"
+default = "~/prompts"
