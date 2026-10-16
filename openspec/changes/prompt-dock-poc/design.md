@@ -6,7 +6,7 @@ See proposal.md for motivation and specs/ for the behavior contract. Facts verif
 
 - Modules run argv commands from `luvus-module.toml`. Docks are flat row lists pushed with `ui dock push` (JSON on stdin). A row has `text`, `dot`, `tone`, `spans`, `action`, `value` and a per-row `menu` of `{title, action, value}`. A row does at most one thing on a left-click, and **a row has no selection state of its own**; `spans` is drawn instead of `text`, while `text` stays the plain label the action receives. Clicked rows get `LUVUS_MODULE_ROW_VALUE`, and menu entries override it with their own `value`. `LUVUS_BIN_PATH` names the luvus binary. A dock can be placed left, right or off and resized, but **not reordered**, so a module cannot put its own dock at the top of a sidebar.
 - `luvus agent list` returns only agents. Each has `pane`, `terminal_id` (32 hex chars), `agent`, `name`, `workspace` (the numeric focused-workspace id), `workspace_name`, `project`.
-- `luvus agent prompt <target> <text> --terminal-id <id>` pastes and submits in one atomic request (`agent.prompt`). It refuses with `agent_not_ready` and queues nothing when the agent has no prompt-ready composer (`src/app/dispatch/agent_workflow.rs:137`).
+- `luvus agent prompt <target> --terminal-id <id> -- <text>` pastes and submits in one atomic request (`agent.prompt`). The text must come after `--`, because without it `agent prompt` reads text that starts with `-` as an unknown option and refuses the send. It refuses with `agent_not_ready` and queues nothing when the agent has no prompt-ready composer (`src/app/dispatch/agent_workflow.rs:137`).
 - `luvus pane split --no-focus` returns `{"pane": "<id>", ...}`. `luvus pane run <id> <cmd>` *types* `cmd` + Enter into the pane's shell (`src/app/dispatch/topology.rs:258`). It is not an exec.
 - `luvus files open` opens a read-only file view, not the configured editor, so it does not meet the inline-edit requirement.
 - Events available: `workspace.created/closed`, `pane.created/closed`, `pane.agent_status_changed`.
@@ -41,11 +41,12 @@ See proposal.md for motivation and specs/ for the behavior contract. Facts verif
 Split each value on the first one or two `|` only, so a `|` in a file name still works. Paths are relative to `root` and resolved again at action time, so a change to the `root` setting cannot point an old row at a file outside the new root. Reject any relpath that resolves outside `root`.
 
 ### D4: Send uses `agent prompt` with `--terminal-id`
-`send.ts` reads the file, then runs `luvus agent prompt <pane> <text> --terminal-id <terminal_id>`, with the text as **one** argv element (`execFileSync`, no shell). The terminal-id makes luvus reject a reused pane id, which covers the stale-target requirement with no module state. On a non-zero exit, show a toast with the stderr summary. On success, show a toast with the prompt and agent labels.
+`send.ts` reads the file, then runs `luvus agent prompt <pane> --terminal-id <terminal_id> -- <text>`, with the text as **one** argv element (`execFileSync`, no shell). The `--` ends option parsing: without it a prompt that starts with `-` (a `---` frontmatter block, a leading bullet) is read as an unknown option and the send fails. The terminal-id makes luvus reject a reused pane id, which covers the stale-target requirement with no module state. On a non-zero exit, show a toast with the stderr summary. On success, show a toast with the prompt and agent labels.
 Alternative: `pane send` + `agent keys enter`. Rejected: two requests are not atomic, and `pane send` has no readiness check.
 
 ### D5: Expanded state in `LUVUS_MODULE_STATE_DIR/expanded.json`
 A JSON array of folder relpaths. `toggle.ts` adds or removes the value and then runs `refresh.ts`. A missing or corrupt file means "all collapsed".
+The state dir is per luvus session (`session_dir()/modules/state/<id>`, `src/module/paths.rs:25`), while settings live in the global config dir — so a named session starts with every folder collapsed but still honours the `root` setting. Nothing deletes the state dir: unlink and relink keep it, because the path is keyed by module id.
 
 ### D6: Inline edit = split pane + typed command
 Read `~/.luvus/config.json` → `layout.file_open`. If it is empty, `readonly` or unreadable, use `nvim`. Run `pane split --no-focus`, then `pane run <new> <editor> '<abs path>'`. The editor value is used as the shell words that luvus stores (for example `emacs -nw`).

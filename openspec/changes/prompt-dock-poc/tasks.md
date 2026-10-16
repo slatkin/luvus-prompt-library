@@ -20,7 +20,7 @@
 
 - [x] 4.1 In `lib.ts`, add value encode/decode for `<pane>|<terminal_id>|<relpath>` (split on the first two `|` only) and the target label builder (design D8). Verify: `lib.test.ts` covers a relpath that contains `|`, plus the named and unnamed label scenarios.
 - [x] 4.2 In `refresh.ts`, read `agent list` and add one "Send to" menu entry per agent to each prompt row. Verify: with a claude pane and a pi pane open, the menu lists both, and a plain shell pane is not listed.
-- [x] 4.3 Implement `send.ts`: read the file at action time, run `agent prompt <pane> <text> --terminal-id <id>` with the text as one argv element, and show a toast on success and on failure. Verify: a multi-line prompt arrives in an idle agent as one submitted prompt. A send to an agent that waits on a permission prompt shows a failure toast and nothing is typed. A send from a menu built before its pane closed shows a failure toast.
+- [x] 4.3 Implement `send.ts`: read the file at action time, run `agent prompt <pane> --terminal-id <id> -- <text>` with the text as one argv element, and show a toast on success and on failure. Verify: a multi-line prompt arrives in an idle agent as one submitted prompt. A send to an agent that waits on a permission prompt shows a failure toast and nothing is typed. A send from a menu built before its pane closed shows a failure toast.
 - [x] 4.4 Verify that the target list follows agents: start `claude` in an existing shell pane and check that it appears in the prompt row menus with no manual refresh. Confirmed live by the user, and the log shows 127 `pane.agent_status_changed` events, each running a refresh that re-reads `luvus agent list`.
 
 ## 5. Docs and integration
@@ -31,7 +31,7 @@
 ## 6. Interaction rework (spec: prompt-dock, agent-prompt-send)
 
 - [x] 6.1 Left-click selects instead of opening (supersedes the 3.1/3.2 entry point): prompt rows carry `action: "select"`, `select.ts` keeps the selection in `LUVUS_MODULE_STATE_DIR/selected.json`, and the selected row is drawn in the accent tone — the closest a module dock row gets to the built-in docks' focused row, which also uses bold and a row background (design D10). Verify: a left-click on a prompt creates no pane, shows the accent row, and survives a restart.
-- [x] 6.2 Put opening in the row menu, in this order: "Send to" entries, `Open` (inline editor pane), `Edit in zed` / `Edit in VS Code`. Verify: the menu lists the send targets first, and `Open` starts the configured editor in a new pane.
+- [x] 6.2 Put opening in the row menu, in this order: "Send to" entries, `Open` (inline editor pane), `Edit in zed` / `Edit in VS Code` (this renames the `Open in zed` / `Open in VS Code` entries that task 3.2 added). Verify: the menu lists the send targets first, and `Open` starts the configured editor in a new pane.
 - [x] 6.3 Row colours and header: folders take `tone: "accent"`, prompts keep the default, and every push carries `--title PROMPTS`. Verify: the header reads `PROMPTS` in upper case.
 - [x] 6.4 Shorten the "Send to" labels to name, kind and pane (design D8), and drop the now-unused `status`/`workspace_name` from the parsed agent. Verify: a menu entry reads `bruv-orch (pi) · pane 12`.
 - [x] 6.5 Limit the "Send to" entries to the focused workspace (design D11): keep the agents whose `workspace` id equals `LUVUS_WORKSPACE_ID`. Verify: with agents in two workspaces the menu lists only the focused one's, the id was confirmed live with a throwaway probe module, and `lib.test.ts` covers the filter and the unknown-id fallback.

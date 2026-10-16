@@ -15,7 +15,8 @@ Status: proof of concept. Planned follow-ups are tracked in
 The **PROMPTS** dock (sidebar, left) shows the markdown files under your
 prompt library root as a folder tree:
 
-- Folders expand and collapse on click; the expanded set survives restarts.
+- Folders are collapsed by default. Clicking one expands or collapses it, and
+  the expanded set survives restarts.
 - Every row starts with a Nerd Font glyph: a folder shows `md-folder`, or
   `md-folder_open` when it is expanded, and a prompt shows `md-chat`. A
   terminal without a Nerd Font shows boxes instead.
@@ -26,8 +27,9 @@ prompt library root as a folder tree:
   names the missing folder.
 
 **Selecting.** A left-click on a prompt row only selects it — it never opens
-an editor. The selected row is drawn in the accent colour with a dot, kept in
-the module state directory, and survives a restart.
+an editor. The selected row is drawn in the accent colour and adds no marker
+of its own, since every prompt row already carries the chat glyph. The choice
+is kept in the module state directory and survives a restart.
 
 **Opening.** Right-click a prompt row and pick **Open** to open it in the
 editor luvus uses for "Open files with" (`layout.file_open` in
