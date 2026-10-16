@@ -18,9 +18,9 @@
 
 ## 4. Send to agent (spec: agent-prompt-send)
 
-- [ ] 4.1 In `lib.ts`, add value encode/decode for `<pane>|<terminal_id>|<relpath>` (split on the first two `|` only) and the target label builder (design D8). Verify: `lib.test.ts` covers a relpath that contains `|`, plus the named and unnamed label scenarios.
-- [ ] 4.2 In `refresh.ts`, read `agent list` and add one "Send to" menu entry per agent to each prompt row. Verify: with a claude pane and a pi pane open, the menu lists both, and a plain shell pane is not listed.
-- [ ] 4.3 Implement `send.ts`: read the file at action time, run `agent prompt <pane> <text> --terminal-id <id>` with the text as one argv element, and show a toast on success and on failure. Verify: a multi-line prompt arrives in an idle agent as one submitted prompt. A send to an agent that waits on a permission prompt shows a failure toast and nothing is typed. A send from a menu built before its pane closed shows a failure toast.
+- [x] 4.1 In `lib.ts`, add value encode/decode for `<pane>|<terminal_id>|<relpath>` (split on the first two `|` only) and the target label builder (design D8). Verify: `lib.test.ts` covers a relpath that contains `|`, plus the named and unnamed label scenarios.
+- [x] 4.2 In `refresh.ts`, read `agent list` and add one "Send to" menu entry per agent to each prompt row. Verify: with a claude pane and a pi pane open, the menu lists both, and a plain shell pane is not listed.
+- [x] 4.3 Implement `send.ts`: read the file at action time, run `agent prompt <pane> <text> --terminal-id <id>` with the text as one argv element, and show a toast on success and on failure. Verify: a multi-line prompt arrives in an idle agent as one submitted prompt. A send to an agent that waits on a permission prompt shows a failure toast and nothing is typed. A send from a menu built before its pane closed shows a failure toast.
 - [ ] 4.4 Verify that the target list follows agents: start `claude` in an existing shell pane and check that it appears in the prompt row menus with no manual refresh.
 
 ## 5. Docs and integration
