@@ -13,27 +13,26 @@ import (
 
 // runSendInTest sets the environment up for one send run, calls the verb
 // function, and returns the returned error and the fake luvus call log.
-func runSendInTest(t *testing.T, value string, root string) (error, string) {
+func runSendInTest(t *testing.T, value string, root string) (string, error) {
 	t.Helper()
 	log := fakeLuvusLog(t)
 	t.Setenv("LUVUS_BIN_PATH", filepath.Join(filepath.Dir(log), "fake-luvus"))
 	t.Setenv("LUVUS_SETTING_ROOT", root)
-	t.Setenv("LUVUS_MODULE_ROW_VALUE", value)
 	err := send(value)
 	raw, err2 := os.ReadFile(log)
 	if err2 != nil {
 		if os.IsNotExist(err2) {
-			return err, ""
+			return "", err
 		}
 		t.Fatal(err2)
 	}
-	return err, string(raw)
+	return string(raw), err
 }
 
 func TestSendRefusesAnAgentWithNoTerminalIdBeforeAnyAgentPromptCall(t *testing.T) {
 	skipOnWindows(t)
 	root := tempLibrary(t)
-	err, calls := runSendInTest(t, "9||plan.md", root)
+	calls, err := runSendInTest(t, "9||plan.md", root)
 	if err == nil {
 		t.Error("send(9||plan.md) = nil, want an error")
 	}
@@ -51,7 +50,7 @@ func TestSendRefusesAnEmptyPromptFileAndNamesTheAgent(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "empty.md"), []byte("  \n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	err, calls := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|empty.md", root)
+	calls, err := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|empty.md", root)
 	if err == nil {
 		t.Error("send(empty.md) = nil, want an error")
 	}
@@ -66,7 +65,7 @@ func TestSendRefusesAnEmptyPromptFileAndNamesTheAgent(t *testing.T) {
 func TestSendReadFailureToastNamesTheAgent(t *testing.T) {
 	skipOnWindows(t)
 	root := tempLibrary(t)
-	err, calls := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|missing.md", root)
+	calls, err := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|missing.md", root)
 	if err == nil {
 		t.Error("send(missing.md) = nil, want an error")
 	}
@@ -87,7 +86,6 @@ func TestSendPassesThePromptAfterDashDashSoDashLeadingTextIsNotAnOption(t *testi
 	log := fakeLuvusLog(t)
 	t.Setenv("LUVUS_BIN_PATH", filepath.Join(filepath.Dir(log), "fake-luvus"))
 	t.Setenv("LUVUS_SETTING_ROOT", root)
-	t.Setenv("LUVUS_MODULE_ROW_VALUE", "9|"+strings.Repeat("d", 32)+"|shot.md")
 
 	if err := send("9|" + strings.Repeat("d", 32) + "|shot.md"); err != nil {
 		t.Fatalf("send(shot.md) = %v, want nil", err)

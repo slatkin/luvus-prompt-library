@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,6 +18,15 @@ type LuvusResult struct {
 	Status int
 	Stdout string
 	Stderr string
+}
+
+// detail is the reason a luvus call gave: its trimmed stderr, else its trimmed
+// stdout.
+func (r LuvusResult) detail() string {
+	if line := strings.TrimSpace(r.Stderr); line != "" {
+		return line
+	}
+	return strings.TrimSpace(r.Stdout)
 }
 
 // luvusBinPath returns the luvus binary to call back into: LUVUS_BIN_PATH,
@@ -45,7 +55,8 @@ func luvus(args []string, input string) LuvusResult {
 	if err == nil {
 		return LuvusResult{Status: 0, Stdout: stdout.String(), Stderr: stderr.String()}
 	}
-	if exit, ok := err.(*exec.ExitError); ok {
+	var exit *exec.ExitError
+	if errors.As(err, &exit) {
 		return LuvusResult{Status: exit.ExitCode(), Stdout: stdout.String(), Stderr: stderr.String()}
 	}
 	// A spawn failure has no stderr; the error text says why.
@@ -152,9 +163,6 @@ func readExpanded(dir string) map[string]bool {
 // writeExpanded writes the expanded-folder set (design D5). An empty set is
 // written as `[]`, never `null`.
 func writeExpanded(dir string, expanded map[string]bool) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
 	// Folder order is sorted: Go set iteration is random, and no reader
 	// depends on the order.
 	rels := make([]string, 0, len(expanded))
@@ -181,21 +189,15 @@ func readSelected(dir string) string {
 	if err != nil {
 		return ""
 	}
-	var parsed any
+	var parsed string
 	if json.Unmarshal(raw, &parsed) != nil {
 		return ""
 	}
-	if s, ok := parsed.(string); ok {
-		return s
-	}
-	return ""
+	return parsed
 }
 
 // writeSelected writes the selected prompt relpath (design D9).
 func writeSelected(dir string, rel string) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
 	// Temp file + rename, for the same reason as the expanded set.
 	file := filepath.Join(dir, "selected.json")
 	encoded, err := json.Marshal(rel)
@@ -206,9 +208,12 @@ func writeSelected(dir string, rel string) error {
 }
 
 // writeAtomic writes a state file through a `.tmp` sibling, then renames it
-// over the old file. The bytes are already indented JSON plus a newline, as
-// the TS code wrote them.
+// over the old file, creating its folder first. The bytes are already indented
+// JSON plus a newline, as the TS code wrote them.
 func writeAtomic(file string, encoded []byte) error {
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		return err
+	}
 	tmp := file + ".tmp"
 	if err := os.WriteFile(tmp, append(encoded, '\n'), 0o644); err != nil {
 		return err
@@ -217,15 +222,15 @@ func writeAtomic(file string, encoded []byte) error {
 }
 
 // AgentInfo is one agent as `luvus agent list` reports it: the fields the
-// module needs. A nil pointer stands for the TS null.
+// module needs. A null field reads as the empty string.
 type AgentInfo struct {
 	Pane  string
 	Agent string
-	// TerminalID is the terminal id as luvus reports it, or nil when the pane
+	// TerminalID is the terminal id as luvus reports it, or "" when the pane
 	// has no terminal runtime.
-	TerminalID *string
-	// Name is the live alias, or nil when the agent has none.
-	Name *string
+	TerminalID string
+	// Name is the live alias, or "" when the agent has none.
+	Name string
 	// Workspace is the id of the workspace that holds the pane, as `agent
 	// list` reports it.
 	Workspace string
@@ -243,15 +248,15 @@ type agentEnvelope struct {
 type agentRaw struct {
 	Pane       *string `json:"pane"`
 	Agent      *string `json:"agent"`
-	TerminalID *string `json:"terminal_id"`
-	Name       *string `json:"name"`
-	Workspace  *string `json:"workspace"`
+	TerminalID string  `json:"terminal_id"`
+	Name       string  `json:"name"`
+	Workspace  string  `json:"workspace"`
 }
 
 // parseAgents pulls the agent array out of `luvus agent list` output. The CLI
 // prints the RPC envelope (`{"id":"1","result":{"agents":[…]}}`). Entries
 // without a pane or agent kind are dropped; a null `terminal_id` is kept as
-// nil and the caller decides what to do with it.
+// "" and the caller decides what to do with it.
 func parseAgents(stdout string) []AgentInfo {
 	var parsed agentEnvelope
 	// Unparseable reply: no targets, never a crash.
@@ -268,13 +273,10 @@ func parseAgents(stdout string) []AgentInfo {
 		if a.Pane == nil || a.Agent == nil {
 			continue
 		}
-		agent := AgentInfo{Pane: *a.Pane, Agent: *a.Agent}
-		agent.TerminalID = a.TerminalID
-		agent.Name = a.Name
-		if a.Workspace != nil {
-			agent.Workspace = *a.Workspace
-		}
-		agents = append(agents, agent)
+		agents = append(agents, AgentInfo{
+			Pane: *a.Pane, Agent: *a.Agent,
+			TerminalID: a.TerminalID, Name: a.Name, Workspace: a.Workspace,
+		})
 	}
 	return agents
 }
@@ -322,16 +324,15 @@ func encodeSendValue(pane string, terminalId string, rel string) string {
 // splitSendValue splits a send value into `[pane, terminalId, relpath]`, on
 // the first two `|` only (design D3), so a `|` in a file name still works.
 func splitSendValue(value string) (string, string, string) {
-	first := strings.Index(value, "|")
-	if first == -1 {
+	pane, rest, ok := strings.Cut(value, "|")
+	if !ok {
 		return "", "", value
 	}
-	second := strings.Index(value[first+1:], "|")
-	if second == -1 {
-		return value[:first], "", value[first+1:]
+	terminalId, rel, ok := strings.Cut(rest, "|")
+	if !ok {
+		return pane, "", rest
 	}
-	second += first + 1
-	return value[:first], value[first+1 : second], value[second+1:]
+	return pane, terminalId, rel
 }
 
 // targetLabel is the target label for menus and toasts (design D8): `<name>
@@ -340,8 +341,8 @@ func splitSendValue(value string) (string, string, string) {
 // out: the label stays short enough to read at a glance.
 func targetLabel(a AgentInfo) string {
 	base := a.Agent
-	if a.Name != nil && *a.Name != "" {
-		base = fmt.Sprintf("%s (%s)", *a.Name, a.Agent)
+	if a.Name != "" {
+		base = fmt.Sprintf("%s (%s)", a.Name, a.Agent)
 	}
 	return fmt.Sprintf("%s · pane %s", base, a.Pane)
 }
@@ -374,24 +375,21 @@ type TreeRow struct {
 // walked again.
 func scanTree(root string, expanded map[string]bool) []TreeRow {
 	rows := []TreeRow{}
-	var walk func(dir string, rel string, depth int, ancestors map[string]bool)
-	walk = func(dir string, rel string, depth int, ancestors map[string]bool) {
+	// onPath holds the real paths of the folders on the walk now, so a folder
+	// that links back up the tree is listed but not walked again.
+	onPath := map[string]bool{}
+	var walk func(dir string, rel string, depth int)
+	walk = func(dir string, rel string, depth int) {
+		real, err := filepath.EvalSymlinks(dir)
+		if err != nil || onPath[real] {
+			return
+		}
 		dirEntries, err := os.ReadDir(dir)
 		if err != nil {
 			return // unreadable folder: render its other siblings, nothing under it
 		}
-		real, err := filepath.EvalSymlinks(dir)
-		if err != nil {
-			return
-		}
-		if ancestors[real] {
-			return
-		}
-		chain := make(map[string]bool, len(ancestors)+1)
-		for a := range ancestors {
-			chain[a] = true
-		}
-		chain[real] = true
+		onPath[real] = true
+		defer delete(onPath, real)
 		var folders, files []string
 		for _, entry := range dirEntries {
 			if strings.HasPrefix(entry.Name(), ".") {
@@ -410,7 +408,7 @@ func scanTree(root string, expanded map[string]bool) []TreeRow {
 			}
 			if isDir {
 				folders = append(folders, entry.Name())
-			} else if isFile && strings.HasSuffix(strings.ToLower(entry.Name()), ".md") {
+			} else if isFile && isPromptFile(entry.Name()) {
 				files = append(files, entry.Name())
 			}
 		}
@@ -418,10 +416,7 @@ func scanTree(root string, expanded map[string]bool) []TreeRow {
 		sort.Strings(folders)
 		sort.Strings(files)
 		for i, name := range folders {
-			childRel := name
-			if rel != "" {
-				childRel = rel + "/" + name
-			}
+			childRel := joinRel(rel, name)
 			// A folder is last only when no file follows it at this level: the
 			// children of a collapsed folder are not rows of their own.
 			rows = append(rows, TreeRow{
@@ -432,7 +427,7 @@ func scanTree(root string, expanded map[string]bool) []TreeRow {
 				IsLast: i == len(folders)-1 && len(files) == 0,
 			})
 			if expanded[childRel] {
-				walk(filepath.Join(dir, name), childRel, depth+1, chain)
+				walk(filepath.Join(dir, name), childRel, depth+1)
 			}
 		}
 		for i, name := range files {
@@ -445,7 +440,7 @@ func scanTree(root string, expanded map[string]bool) []TreeRow {
 			})
 		}
 	}
-	walk(root, "", 0, map[string]bool{})
+	walk(root, "", 0)
 	return rows
 }
 
@@ -455,6 +450,12 @@ func joinRel(rel string, name string) string {
 		return name
 	}
 	return rel + "/" + name
+}
+
+// isPromptFile reports whether a file name is a prompt: it ends in `.md` in any
+// case.
+func isPromptFile(name string) bool {
+	return len(name) >= 3 && strings.EqualFold(name[len(name)-3:], ".md")
 }
 
 // toast shows a one-line message in the UI (design Context).

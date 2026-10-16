@@ -4,8 +4,7 @@
 // equal the action ids in luvus-module.toml, and the startup and event entries
 // use refresh. Every verb function returns an error; main prints it to stderr
 // and exits 1, which replaces the TS fail() (which threw) and isMain() (which
-// tests needed). Verbs that are not ported yet return a "not implemented"
-// error; tasks 2-5 of the port-to-go change fill them in.
+// tests needed).
 package main
 
 import (
@@ -14,11 +13,6 @@ import (
 )
 
 const usage = "usage: prompt-dock <refresh|toggle|select|edit-inline|edit-external|send>"
-
-// notImplemented is the placeholder error of a verb that has no port yet.
-func notImplemented(verb string) error {
-	return fmt.Errorf("%s: not implemented", verb)
-}
 
 // runEditInline opens a prompt in a split pane (task 4.1). It replaces the
 // LUVUS_MODULE_ACTION_ID branch of edit.ts.
@@ -51,7 +45,7 @@ func runSend() error {
 }
 
 var verbs = map[string]func() error{
-	"refresh":       runRefresh,
+	"refresh":       refreshDock,
 	"toggle":        runToggle,
 	"select":        runSelect,
 	"edit-inline":   runEditInline,

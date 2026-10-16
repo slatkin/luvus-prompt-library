@@ -15,14 +15,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
 const FALLBACK_EDITOR = "nvim"
 
-// externalEditors are the external editors refresh.go offers; anything else
-// is refused.
-var externalEditors = []string{"zed", "code"}
+// externalEditors are the external editors the dock offers, in menu order.
+// edit-external refuses any editor not listed here.
+var externalEditors = []Editor{{Bin: "zed", Label: "zed"}, {Bin: "code", Label: "VS Code"}}
 
 // readRawFileOpen reads luvus "Open files with" from ~/.luvus/config.json
 // (design D6). Returns the raw setting value, or "" when the file is missing,
@@ -75,22 +76,10 @@ func editInline(value string) error {
 
 	editor := resolveInlineEditor(readRawFileOpen())
 	split := luvus([]string{"pane", "split", "--no-focus"}, "")
-	if split.Status != 0 {
+	paneId := paneIdFromSplit(split.Stdout)
+	if split.Status != 0 || paneId == "" {
 		toast("Couldn't open a pane for editing. Please try again.")
-		detail := strings.TrimSpace(split.Stderr)
-		if detail == "" {
-			detail = strings.TrimSpace(split.Stdout)
-		}
-		return fmt.Errorf("edit-inline: pane split failed (status %d): %s", split.Status, detail)
-	}
-	paneId, ok := paneIdFromSplit(split.Stdout)
-	if !ok {
-		toast("Couldn't open a pane for editing. Please try again.")
-		return fmt.Errorf("edit-inline: unexpected pane split output: %s", strings.TrimSpace(split.Stdout))
-	}
-	if paneId == "" {
-		toast("Couldn't open a pane for editing. Please try again.")
-		return fmt.Errorf("edit-inline: no pane id in pane split output: %s", strings.TrimSpace(split.Stdout))
+		return fmt.Errorf("edit-inline: pane split failed (status %d): %s", split.Status, split.detail())
 	}
 
 	run := luvus([]string{"pane", "run", paneId, editor + " '" + abs + "'"}, "")
@@ -98,22 +87,19 @@ func editInline(value string) error {
 		// Close the pane we just split, so a failed run leaves no empty pane behind.
 		luvus([]string{"pane", "close", paneId}, "")
 		toast("Couldn't start the editor in the new pane. Please try again.")
-		detail := strings.TrimSpace(run.Stderr)
-		if detail == "" {
-			detail = strings.TrimSpace(run.Stdout)
-		}
-		return fmt.Errorf("edit-inline: pane run failed (status %d): %s", run.Status, detail)
+		return fmt.Errorf("edit-inline: pane run failed (status %d): %s", run.Status, run.detail())
 	}
 	return nil
 }
 
-// paneIdFromSplit decodes the `pane split` reply and returns the new pane id.
-// luvus prints the RPC envelope; a flat object is accepted too, and `pane`
-// may be a string or a number (the TS code used String(...)).
-func paneIdFromSplit(stdout string) (string, bool) {
+// paneIdFromSplit decodes the `pane split` reply and returns the new pane id,
+// or "" when the reply has none. luvus prints the RPC envelope; a flat object
+// is accepted too, and `pane` may be a string or a number (the TS code used
+// String(...)).
+func paneIdFromSplit(stdout string) string {
 	var parsed map[string]any
 	if json.Unmarshal([]byte(stdout), &parsed) != nil {
-		return "", false
+		return ""
 	}
 	node := parsed
 	if result, ok := parsed["result"].(map[string]any); ok {
@@ -121,22 +107,22 @@ func paneIdFromSplit(stdout string) (string, bool) {
 	}
 	switch v := node["pane"].(type) {
 	case string:
-		return v, true
+		return v
 	case float64:
-		return fmt.Sprintf("%v", v), true
+		return fmt.Sprintf("%v", v)
 	default:
-		return "", true // parsed, but no usable pane id
+		return ""
 	}
 }
 
 // splitExternalValue splits an edit-external row value on the FIRST `|` only
 // (design D3), so a `|` in a file name still works. Returns [editor, relpath].
 func splitExternalValue(value string) (string, string) {
-	sep := strings.Index(value, "|")
-	if sep == -1 {
+	editor, rel, ok := strings.Cut(value, "|")
+	if !ok {
 		return "", value
 	}
-	return value[:sep], value[sep+1:]
+	return editor, rel
 }
 
 // editExternal starts the editor detached and finishes at once (design D7).
@@ -145,13 +131,7 @@ func editExternal(value string) error {
 	if editor == "" {
 		return fmt.Errorf("edit-external: malformed value (expected <editor>|<relpath>): %s", value)
 	}
-	known := false
-	for _, e := range externalEditors {
-		if e == editor {
-			known = true
-		}
-	}
-	if !known {
+	if !slices.ContainsFunc(externalEditors, func(e Editor) bool { return e.Bin == editor }) {
 		return fmt.Errorf("edit-external: unknown editor: %s", editor)
 	}
 

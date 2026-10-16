@@ -7,7 +7,7 @@ if ! output=$(gofmt -l . 2>&1) || [ -n "$output" ]; then
   exit 1
 fi
 
-for gate in "go vet ./..." "go test ./..."; do
+for gate in "go vet ./..." "golangci-lint run ./..." "go test ./..."; do
   if ! output=$($gate 2>&1); then
     printf '\npre-commit: %s failed\n\n%s\n' "$gate" "$output"
     exit 1

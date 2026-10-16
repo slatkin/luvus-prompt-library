@@ -12,23 +12,29 @@ import (
 	"strings"
 )
 
-const dockID = "prompts"
-const dockTitle = "PROMPTS"
+const (
+	dockID    = "prompts"
+	dockTitle = "PROMPTS"
+)
 
 // The tree is drawn with box-drawing branches. Each row with a parent starts
 // with one guide cell per ancestor, then a connector; root rows carry no prefix,
 // so their glyph sits at the dock's left edge.
-const guidePipe = "│ "
-const guideBlank = "  "
-const branchMid = "├─ "
-const branchLast = "└─ "
+const (
+	guidePipe  = "│ "
+	guideBlank = "  "
+	branchMid  = "├─ "
+	branchLast = "└─ "
+)
 
 // Row prefixes, written as escapes so the codepoints stay exact and reviewable.
 // These are Nerd Font glyphs (Material Design set), so the terminal needs a Nerd
 // Font — the same assumption luvus's own web client makes in its font stack.
-const promptGlyph = "\U000F0B79" // md-chat
-const folderGlyph = "\U000F024B" // md-folder
-const folderOpenGlyph = "\U000F0770"
+const (
+	promptGlyph     = "\U000F0B79" // md-chat
+	folderGlyph     = "\U000F024B" // md-folder
+	folderOpenGlyph = "\U000F0770"
+)
 
 // DockRow is one row as `ui dock push` accepts it (JSON on stdin).
 type DockRow struct {
@@ -65,12 +71,8 @@ type Editor struct {
 // availableEditors returns the external editors found on PATH; a refresh
 // checks this once.
 func availableEditors() []Editor {
-	candidates := []Editor{
-		{Bin: "zed", Label: "zed"},
-		{Bin: "code", Label: "VS Code"},
-	}
 	editors := []Editor{}
-	for _, e := range candidates {
+	for _, e := range externalEditors {
 		if _, err := exec.LookPath(e.Bin); err == nil {
 			editors = append(editors, e)
 		}
@@ -101,14 +103,10 @@ func editMenuEntries(rel string, editors []Editor) []DockMenuEntry {
 func sendMenuEntries(rel string, agents []AgentInfo) []DockMenuEntry {
 	entries := []DockMenuEntry{}
 	for _, a := range agents {
-		terminalID := ""
-		if a.TerminalID != nil {
-			terminalID = *a.TerminalID
-		}
 		entries = append(entries, DockMenuEntry{
 			Title:  fmt.Sprintf("Send to %s", targetLabel(a)),
 			Action: "send",
-			Value:  encodeSendValue(a.Pane, terminalID, rel),
+			Value:  encodeSendValue(a.Pane, a.TerminalID, rel),
 		})
 	}
 	return entries
@@ -258,14 +256,7 @@ func refreshDock() error {
 	// Push the title too: without one, luvus titles the dock from its id.
 	res := luvus([]string{"ui", "dock", "push", "--id", dockID, "--title", dockTitle}, string(input))
 	if res.Status != 0 {
-		detail := strings.TrimSpace(res.Stderr)
-		if detail == "" {
-			detail = strings.TrimSpace(res.Stdout)
-		}
-		fmt.Fprintf(os.Stderr, "ui dock push failed (status %d): %s\n", res.Status, detail)
+		fmt.Fprintf(os.Stderr, "ui dock push failed (status %d): %s\n", res.Status, res.detail())
 	}
 	return nil
 }
-
-// runRefresh repaints the dock after startup, events, and the Refresh action.
-func runRefresh() error { return refreshDock() }

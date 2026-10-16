@@ -15,11 +15,7 @@ import (
 // else stdout. Whitespace runs collapse to single spaces, and the cut to 160
 // is by rune, so it never splits a UTF-8 sequence (design D14).
 func summarize(res LuvusResult) string {
-	line := strings.TrimSpace(res.Stderr)
-	if line == "" {
-		line = strings.TrimSpace(res.Stdout)
-	}
-	line = strings.Join(strings.Fields(line), " ")
+	line := strings.Join(strings.Fields(res.detail()), " ")
 	runes := []rune(line)
 	if len(runes) > 160 {
 		runes = runes[:160]
@@ -30,7 +26,7 @@ func summarize(res LuvusResult) string {
 // promptName is the prompt's display name: the file name without `.md`.
 func promptName(rel string) string {
 	name := filepath.Base(rel)
-	if len(name) >= 3 && strings.EqualFold(name[len(name)-3:], ".md") {
+	if isPromptFile(name) {
 		return name[:len(name)-3]
 	}
 	return name
@@ -42,11 +38,7 @@ func promptName(rel string) string {
 // that pair.
 func labelForTarget(pane string, terminalId string) string {
 	for _, a := range listAgents() {
-		id := ""
-		if a.TerminalID != nil {
-			id = *a.TerminalID
-		}
-		if a.Pane == pane && id == terminalId {
+		if a.Pane == pane && a.TerminalID == terminalId {
 			return targetLabel(a)
 		}
 	}
@@ -80,7 +72,7 @@ func send(value string) error {
 	raw, err := os.ReadFile(abs)
 	if err != nil {
 		toast(fmt.Sprintf("Send to %s failed: couldn't read %q.", label, promptName(rel)))
-		return fmt.Errorf("send: read failed for %s: %v", abs, err)
+		return fmt.Errorf("send: read failed for %s: %w", abs, err)
 	}
 	// A UTF-8 byte-order mark is not part of the prompt; drop it.
 	text := strings.TrimPrefix(string(raw), "\ufeff")

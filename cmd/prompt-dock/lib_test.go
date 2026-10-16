@@ -20,8 +20,6 @@ func posixOnly(t *testing.T) {
 	}
 }
 
-func strPtr(s string) *string { return &s }
-
 func TestExpandHomeExpandsALeadingTildeToTheHomeFolder(t *testing.T) {
 	home, _ := os.UserHomeDir()
 	if got, want := expandHome("~/.prompts"), filepath.Join(home, ".prompts"); got != want {
@@ -316,8 +314,8 @@ func TestTargetLabelANamedAgentShowsAliasKindAndPaneOnly(t *testing.T) {
 	label := targetLabel(AgentInfo{
 		Pane:       "9",
 		Agent:      "pi",
-		TerminalID: strPtr("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-		Name:       strPtr("pipi"),
+		TerminalID: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		Name:       "pipi",
 		Workspace:  "3",
 	})
 	if want := "pipi (pi) · pane 9"; label != want {
@@ -329,8 +327,8 @@ func TestTargetLabelAnUnnamedAgentShowsKindAndPaneWithoutTheParenthetical(t *tes
 	label := targetLabel(AgentInfo{
 		Pane:       "118",
 		Agent:      "claude",
-		TerminalID: strPtr("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-		Name:       nil,
+		TerminalID: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		Name:       "",
 		Workspace:  "2",
 	})
 	if want := "claude · pane 118"; label != want {
@@ -375,10 +373,10 @@ func TestParseAgentsReadsTheAgentArrayOutOfTheCLIEnvelope(t *testing.T) {
 	if got, want := agents[0].Agent, "pi"; got != want {
 		t.Errorf("agent = %q, want %q", got, want)
 	}
-	if agents[0].TerminalID == nil || *agents[0].TerminalID != hex {
-		t.Errorf("terminal_id = %v, want %q", agents[0].TerminalID, hex)
+	if agents[0].TerminalID != hex {
+		t.Errorf("terminal_id = %q, want %q", agents[0].TerminalID, hex)
 	}
-	if agents[0].Name == nil || *agents[0].Name != "pipi" {
+	if agents[0].Name != "pipi" {
 		t.Errorf("name = %v, want pipi", agents[0].Name)
 	}
 	if got, want := agents[0].Workspace, "3"; got != want {
@@ -390,11 +388,11 @@ func TestParseAgentsReadsTheAgentArrayOutOfTheCLIEnvelope(t *testing.T) {
 	if got, want := agents[1].Agent, "claude"; got != want {
 		t.Errorf("agent = %q, want %q", got, want)
 	}
-	if agents[1].TerminalID != nil {
-		t.Errorf("terminal_id = %v, want nil", agents[1].TerminalID)
+	if agents[1].TerminalID != "" {
+		t.Errorf("terminal_id = %q, want empty", agents[1].TerminalID)
 	}
-	if agents[1].Name != nil {
-		t.Errorf("name = %v, want nil", agents[1].Name)
+	if agents[1].Name != "" {
+		t.Errorf("name = %q, want empty", agents[1].Name)
 	}
 	if got, want := agents[1].Workspace, "2"; got != want {
 		t.Errorf("workspace = %q, want %q", got, want)
