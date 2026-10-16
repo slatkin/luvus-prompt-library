@@ -40,8 +40,15 @@ func runEditExternal() error {
 	return editExternal(value)
 }
 
-// runSend sends a prompt to an agent pane (task 5.1).
-func runSend() error { return notImplemented("send") }
+// runSend sends a prompt to an agent pane (task 5.1). It replaces the send
+// branch of the TS row menu, which read LUVUS_MODULE_ROW_VALUE in send.ts.
+func runSend() error {
+	value := os.Getenv("LUVUS_MODULE_ROW_VALUE")
+	if value == "" {
+		return fmt.Errorf("send: no row value (LUVUS_MODULE_ROW_VALUE unset)")
+	}
+	return send(value)
+}
 
 var verbs = map[string]func() error{
 	"refresh":       runRefresh,
