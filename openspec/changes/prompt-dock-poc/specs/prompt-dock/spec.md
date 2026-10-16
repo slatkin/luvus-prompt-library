@@ -18,7 +18,7 @@ The module SHALL read the prompt library from the folder in the module setting `
 - **THEN** the dock shows one muted row that names the missing folder, and no other rows
 
 ### Requirement: Tree rows
-The dock SHALL show one row per folder and one row per `.md` file under the root, in depth-first order, indented by depth. Folders SHALL come before files at each level, and each group SHALL be sorted by name. Prompt rows SHALL show the file name without `.md`. Hidden entries (names that start with `.`) and non-`.md` files SHALL NOT show.
+The dock SHALL show one row per folder and one row per `.md` file under the root, in depth-first order. A child row SHALL start one space to the right of its parent's name, at every level of the tree. Folders SHALL come before files at each level, and each group SHALL be sorted by name. Prompt rows SHALL show the file name without `.md`. Hidden entries (names that start with `.`) and non-`.md` files SHALL NOT show.
 
 #### Scenario: Nested library
 - **WHEN** the root has `review/rust.md`, `review/ts.md` and `plan.md`, and `review` is expanded

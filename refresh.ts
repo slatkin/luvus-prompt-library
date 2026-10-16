@@ -24,7 +24,10 @@ import {
 
 const DOCK_ID = "prompts";
 const DOCK_TITLE = "PROMPTS";
-const INDENT = "  ";
+// One level of nesting. A folder row spends two of these columns on its `▸ `
+// glyph, so a three-space step puts every child one space right of its parent's
+// name; a two-space step puts the child flush under that name instead.
+const INDENT = "   ";
 // The dot on the selected row. A module dock row can set a status dot and a tone,
 // but not bold or a row background, so the accent tone plus a filled dot is the
 // closest a module gets to the focused row of the built-in docks.
