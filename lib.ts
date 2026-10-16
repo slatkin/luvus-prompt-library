@@ -105,6 +105,109 @@ export function writeExpanded(dir: string, expanded: Iterable<string>): void {
   );
 }
 
+/** One agent as `luvus agent list` reports it: the fields the module needs. */
+export interface AgentInfo {
+  pane: string;
+  agent: string;
+  /** 32 hex chars, or null when the pane has no terminal runtime. */
+  terminal_id: string | null;
+  /** The live alias, or null when the agent has none. */
+  name: string | null;
+  status: string;
+  workspace_name: string;
+}
+
+/**
+ * Pull the agent array out of `luvus agent list` output. The CLI prints the
+ * RPC envelope (`{"id":"1","result":{"agents":[…]}}`); a bare
+ * `{agents:[…]}` object or a bare array is accepted too. Entries without a
+ * pane or agent kind are dropped; a null `terminal_id` is kept and the caller
+ * decides what to do with it.
+ */
+export function parseAgents(stdout: string): AgentInfo[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    return []; // unparseable reply: no targets, never a crash
+  }
+  // The shapes the CLI may print, checked one by one to stay flat:
+  const envelope = parsed as { result?: { agents?: unknown } };
+  const bare = parsed as { agents?: unknown };
+  let list: unknown[];
+  if (Array.isArray(parsed)) list = parsed;
+  else if (Array.isArray(bare.agents)) list = bare.agents as unknown[];
+  else if (Array.isArray(envelope.result?.agents)) {
+    list = envelope.result?.agents as unknown[];
+  } else return [];
+  const agents: AgentInfo[] = [];
+  for (const raw of list) {
+    const a = raw as Partial<AgentInfo>;
+    if (typeof a.pane !== "string" || typeof a.agent !== "string") continue;
+    agents.push({
+      pane: a.pane,
+      agent: a.agent,
+      terminal_id: typeof a.terminal_id === "string" ? a.terminal_id : null,
+      name: typeof a.name === "string" ? a.name : null,
+      status: typeof a.status === "string" ? a.status : "",
+      workspace_name: typeof a.workspace_name === "string" ? a.workspace_name : "",
+    });
+  }
+  return agents;
+}
+
+/**
+ * The live agents across all workspaces and tabs (`luvus agent list`, design
+ * D2). A failed or unparseable reply means no targets, never a crash.
+ */
+export function listAgents(): AgentInfo[] {
+  const res = luvus(["agent", "list"]);
+  if (res.status !== 0) return [];
+  try {
+    return parseAgents(res.stdout);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The "Send to" row value: `<pane>|<terminal_id>|<relpath>` (design D3). The
+ * terminal id is what makes luvus reject a reused pane id (design D4).
+ */
+export function encodeSendValue(pane: string, terminalId: string, rel: string): string {
+  return `${pane}|${terminalId}|${rel}`;
+}
+
+/**
+ * Split a send value into `[pane, terminalId, relpath]`, on the first two `|`
+ * only (design D3), so a `|` in a file name still works.
+ */
+export function splitSendValue(value: string): [string, string, string] {
+  const first = value.indexOf("|");
+  if (first === -1) return ["", "", value];
+  const second = value.indexOf("|", first + 1);
+  if (second === -1) {
+    return [value.slice(0, first), "", value.slice(first + 1)];
+  }
+  return [
+    value.slice(0, first),
+    value.slice(first + 1, second),
+    value.slice(second + 1),
+  ];
+}
+
+/**
+ * The target label for menus and toasts (design D8):
+ * `<name ?? agent + " · pane " + pane> (<agent>) · <status> · <workspace>`.
+ * When the agent has no alias the kind is already in the base, so the
+ * parenthetical `(<agent>)` is left out.
+ */
+export function targetLabel(a: AgentInfo): string {
+  const base = a.name || `${a.agent} · pane ${a.pane}`;
+  const kind = a.name ? ` (${a.agent})` : "";
+  return `${base}${kind} · ${a.status} · ${a.workspace_name}`;
+}
+
 /** One entry of the scanned tree, in dock-row order (spec: tree rows). */
 export interface TreeRow {
   /** Path relative to the root, `/`-separated on every platform. */

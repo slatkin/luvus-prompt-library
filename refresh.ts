@@ -6,11 +6,14 @@ import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 import {
+  encodeSendValue,
+  listAgents,
   luvus,
   moduleStateDir,
   readExpanded,
   scanTree,
   settingRoot,
+  targetLabel,
   type TreeRow,
 } from "./lib.ts";
 import { findOnPath } from "./edit.ts";
@@ -49,6 +52,21 @@ export function editorMenuEntries(rel: string): DockMenuEntry[] {
   return entries;
 }
 
+/**
+ * One "Send to" entry per live agent for a prompt row (spec: agent send
+ * targets). Only agents with a terminal id can be guarded against a reused
+ * pane id (design D4), so the rest are left out.
+ */
+export function sendMenuEntries(rel: string): DockMenuEntry[] {
+  return listAgents()
+    .filter((a) => a.terminal_id !== null)
+    .map((a) => ({
+      title: `Send to ${targetLabel(a)}`,
+      action: "send",
+      value: encodeSendValue(a.pane, a.terminal_id as string, rel),
+    }));
+}
+
 /** Build the dock rows for `root`: the tree, or the missing-root row. */
 export function buildRows(root: string, expanded: ReadonlySet<string>): DockRow[] {
   if (!existsSync(root) || !statSync(root).isDirectory()) {
@@ -73,7 +91,7 @@ function toDockRow(row: TreeRow, isExpanded: boolean): DockRow {
     text: `${indent}${row.name}`,
     action: "edit-inline",
     value: row.rel,
-    menu: editorMenuEntries(row.rel),
+    menu: [...editorMenuEntries(row.rel), ...sendMenuEntries(row.rel)],
   };
 }
 

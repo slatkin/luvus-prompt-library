@@ -1,20 +1,24 @@
 // lib.test.ts — run with `node --test`.
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { homedir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
 import { findOnPath, resolveInlineEditor, splitExternalValue } from "./edit.ts";
-import { editorMenuEntries } from "./refresh.ts";
+import { editorMenuEntries, sendMenuEntries } from "./refresh.ts";
 
 import {
+  encodeSendValue,
   expandHome,
+  parseAgents,
   readExpanded,
   resolveRoot,
   resolveUnderRoot,
   scanTree,
+  splitSendValue,
+  targetLabel,
   writeExpanded,
 } from "./lib.ts";
 
@@ -162,4 +166,100 @@ test("splitExternalValue splits on the first | only, so | in a filename works", 
   const [editor, rel] = splitExternalValue("code|weird|name.md");
   assert.equal(editor, "code");
   assert.equal(rel, "weird|name.md");
+});
+
+// ---- send targets (tasks 4.1 / 4.2) ----
+
+test("encodeSendValue then splitSendValue round-trips, even with | in the file name", () => {
+  const value = encodeSendValue("118", "a".repeat(32), "weird|name.md");
+  assert.deepEqual(splitSendValue(value), ["118", "a".repeat(32), "weird|name.md"]);
+});
+
+test("splitSendValue splits on the first two | only, so | in a relpath works", () => {
+  assert.deepEqual(splitSendValue("12|abc|review|plan.md"), ["12", "abc", "review|plan.md"]);
+  assert.deepEqual(splitSendValue("12|abc|plan.md"), ["12", "abc", "plan.md"]);
+  assert.deepEqual(splitSendValue("no-separators.md"), ["", "", "no-separators.md"]);
+});
+
+test("targetLabel: a named agent shows alias, kind, status, and workspace", () => {
+  const label = targetLabel({
+    pane: "9", agent: "pi", terminal_id: "a".repeat(32),
+    name: "pipi", status: "idle", workspace_name: "pi-luvus",
+  });
+  for (const part of ["pipi", "pi", "idle", "pi-luvus"]) {
+    assert.ok(label.includes(part), `label ${label} should contain ${part}`);
+  }
+});
+
+test("targetLabel: an unnamed agent shows kind and pane id, without the parenthetical", () => {
+  const label = targetLabel({
+    pane: "118", agent: "claude", terminal_id: "a".repeat(32),
+    name: null, status: "working", workspace_name: "mbv",
+  });
+  assert.ok(label.includes("claude"), label);
+  assert.ok(label.includes("118"), label);
+  assert.ok(!label.includes("(claude)"), `label ${label} should have no parenthetical kind`);
+});
+
+test("parseAgents reads the agent array out of the CLI envelope", () => {
+  const stdout = JSON.stringify({
+    id: "1",
+    result: {
+      agents: [
+        { pane: "9", agent: "pi", terminal_id: "a".repeat(32), name: "pipi", status: "idle", workspace_name: "pi-luvus" },
+        { pane: "10", agent: "claude", terminal_id: null, name: null, status: "working", workspace_name: "mbv" },
+        { pane: "11" }, // no agent kind: dropped
+      ],
+    },
+  });
+  const agents = parseAgents(stdout);
+  assert.deepEqual(
+    agents.map((a) => [a.pane, a.agent, a.terminal_id, a.name]),
+    [["9", "pi", "a".repeat(32), "pipi"], ["10", "claude", null, null]],
+  );
+});
+
+test("parseAgents tolerates a bare agents object, a bare array, and garbage", () => {
+  const agent = { pane: "7", agent: "codex", terminal_id: "b".repeat(32), name: null, status: "idle", workspace_name: "w" };
+  assert.equal(parseAgents(JSON.stringify({ agents: [agent] })).length, 1);
+  assert.equal(parseAgents(JSON.stringify([agent])).length, 1);
+  assert.deepEqual(parseAgents("not json"), []);
+  assert.deepEqual(parseAgents(JSON.stringify({ other: true })), []);
+});
+
+/** A fake `luvus` binary whose `agent list` prints the given JSON. */
+function fakeLuvus(stdout: string): string {
+  const dir = mkdtempSync(path.join(tmpdir(), "prompt-dock-bin-"));
+  const script = path.join(dir, "fake-luvus");
+  writeFileSync(script, `#!/bin/sh\ncat <<'JSON'\n${stdout}\nJSON\n`);
+  chmodSync(script, 0o755);
+  return script;
+}
+
+test("sendMenuEntries: one Send to entry per guarded agent, none for the rest", () => {
+  const hex = "c".repeat(32);
+  const script = fakeLuvus(JSON.stringify({
+    id: "1",
+    result: {
+      agents: [
+        { pane: "9", agent: "pi", terminal_id: hex, name: "pipi", status: "idle", workspace_name: "pi-luvus" },
+        { pane: "10", agent: "claude", terminal_id: null, name: null, status: "working", workspace_name: "mbv" },
+      ],
+    },
+  }));
+  const prevBin = process.env.LUVUS_BIN_PATH;
+  process.env.LUVUS_BIN_PATH = script;
+  try {
+    const entries = sendMenuEntries("plan.md");
+    // The agent without a terminal id cannot be guarded, so it gets no entry.
+    assert.equal(entries.length, 1);
+    assert.ok(entries[0].title.startsWith("Send to "), entries[0].title);
+    assert.ok(entries[0].title.includes("pipi"), entries[0].title);
+    assert.equal(entries[0].action, "send");
+    assert.equal(entries[0].value, `9|${hex}|plan.md`);
+  } finally {
+    if (prevBin === undefined) delete process.env.LUVUS_BIN_PATH;
+    else process.env.LUVUS_BIN_PATH = prevBin;
+    rmSync(path.dirname(script), { recursive: true, force: true });
+  }
 });
