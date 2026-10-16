@@ -45,10 +45,7 @@ test("resolveRoot reads the root setting and expands ~", () => {
 test("resolveUnderRoot resolves relpaths inside the root", () => {
   const root = "/tmp/library";
   assert.equal(resolveUnderRoot(root, "plan.md"), "/tmp/library/plan.md");
-  assert.equal(
-    resolveUnderRoot(root, "review/rust.md"),
-    "/tmp/library/review/rust.md",
-  );
+  assert.equal(resolveUnderRoot(root, "review/rust.md"), "/tmp/library/review/rust.md");
 });
 
 test("resolveUnderRoot rejects a relpath that escapes the root", () => {
@@ -127,7 +124,6 @@ test("writeExpanded then readExpanded round-trips the folder set", () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-
 // ---- editing helpers (tasks 3.1 / 3.2) ----
 test("resolveInlineEditor keeps the configured editor", () => {
   assert.equal(resolveInlineEditor("hx"), "hx");
@@ -183,8 +179,12 @@ test("splitSendValue splits on the first two | only, so | in a relpath works", (
 
 test("targetLabel: a named agent shows alias, kind, status, and workspace", () => {
   const label = targetLabel({
-    pane: "9", agent: "pi", terminal_id: "a".repeat(32),
-    name: "pipi", status: "idle", workspace_name: "pi-luvus",
+    pane: "9",
+    agent: "pi",
+    terminal_id: "a".repeat(32),
+    name: "pipi",
+    status: "idle",
+    workspace_name: "pi-luvus",
   });
   for (const part of ["pipi", "pi", "idle", "pi-luvus"]) {
     assert.ok(label.includes(part), `label ${label} should contain ${part}`);
@@ -193,8 +193,12 @@ test("targetLabel: a named agent shows alias, kind, status, and workspace", () =
 
 test("targetLabel: an unnamed agent shows kind and pane id, without the parenthetical", () => {
   const label = targetLabel({
-    pane: "118", agent: "claude", terminal_id: "a".repeat(32),
-    name: null, status: "working", workspace_name: "mbv",
+    pane: "118",
+    agent: "claude",
+    terminal_id: "a".repeat(32),
+    name: null,
+    status: "working",
+    workspace_name: "mbv",
   });
   assert.ok(label.includes("claude"), label);
   assert.ok(label.includes("118"), label);
@@ -206,8 +210,22 @@ test("parseAgents reads the agent array out of the CLI envelope", () => {
     id: "1",
     result: {
       agents: [
-        { pane: "9", agent: "pi", terminal_id: "a".repeat(32), name: "pipi", status: "idle", workspace_name: "pi-luvus" },
-        { pane: "10", agent: "claude", terminal_id: null, name: null, status: "working", workspace_name: "mbv" },
+        {
+          pane: "9",
+          agent: "pi",
+          terminal_id: "a".repeat(32),
+          name: "pipi",
+          status: "idle",
+          workspace_name: "pi-luvus",
+        },
+        {
+          pane: "10",
+          agent: "claude",
+          terminal_id: null,
+          name: null,
+          status: "working",
+          workspace_name: "mbv",
+        },
         { pane: "11" }, // no agent kind: dropped
       ],
     },
@@ -215,12 +233,22 @@ test("parseAgents reads the agent array out of the CLI envelope", () => {
   const agents = parseAgents(stdout);
   assert.deepEqual(
     agents.map((a) => [a.pane, a.agent, a.terminal_id, a.name]),
-    [["9", "pi", "a".repeat(32), "pipi"], ["10", "claude", null, null]],
+    [
+      ["9", "pi", "a".repeat(32), "pipi"],
+      ["10", "claude", null, null],
+    ],
   );
 });
 
 test("parseAgents tolerates a bare agents object, a bare array, and garbage", () => {
-  const agent = { pane: "7", agent: "codex", terminal_id: "b".repeat(32), name: null, status: "idle", workspace_name: "w" };
+  const agent = {
+    pane: "7",
+    agent: "codex",
+    terminal_id: "b".repeat(32),
+    name: null,
+    status: "idle",
+    workspace_name: "w",
+  };
   assert.equal(parseAgents(JSON.stringify({ agents: [agent] })).length, 1);
   assert.equal(parseAgents(JSON.stringify([agent])).length, 1);
   assert.deepEqual(parseAgents("not json"), []);
@@ -238,15 +266,31 @@ function fakeLuvus(stdout: string): string {
 
 test("sendMenuEntries: one Send to entry per guarded agent, none for the rest", () => {
   const hex = "c".repeat(32);
-  const script = fakeLuvus(JSON.stringify({
-    id: "1",
-    result: {
-      agents: [
-        { pane: "9", agent: "pi", terminal_id: hex, name: "pipi", status: "idle", workspace_name: "pi-luvus" },
-        { pane: "10", agent: "claude", terminal_id: null, name: null, status: "working", workspace_name: "mbv" },
-      ],
-    },
-  }));
+  const script = fakeLuvus(
+    JSON.stringify({
+      id: "1",
+      result: {
+        agents: [
+          {
+            pane: "9",
+            agent: "pi",
+            terminal_id: hex,
+            name: "pipi",
+            status: "idle",
+            workspace_name: "pi-luvus",
+          },
+          {
+            pane: "10",
+            agent: "claude",
+            terminal_id: null,
+            name: null,
+            status: "working",
+            workspace_name: "mbv",
+          },
+        ],
+      },
+    }),
+  );
   const prevBin = process.env.LUVUS_BIN_PATH;
   process.env.LUVUS_BIN_PATH = script;
   try {

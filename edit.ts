@@ -33,9 +33,7 @@ function fail(context: string, detail: string): never {
  */
 function readRawFileOpen(): string | null {
   try {
-    const config = JSON.parse(
-      readFileSync(path.join(homedir(), ".luvus", "config.json"), "utf8"),
-    );
+    const config = JSON.parse(readFileSync(path.join(homedir(), ".luvus", "config.json"), "utf8"));
     const value = config?.layout?.file_open;
     return typeof value === "string" ? value : null;
   } catch {
@@ -62,9 +60,7 @@ export function resolveInlineEditor(raw: string | null): string {
 export function findOnPath(bin: string): boolean {
   const pathEnv = process.env.PATH || "";
   const exts =
-    process.platform === "win32"
-      ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";")
-      : [""];
+    process.platform === "win32" ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";") : [""];
   for (const dir of pathEnv.split(path.delimiter)) {
     if (!dir) continue;
     for (const ext of exts) {
@@ -98,7 +94,10 @@ function editInline(value: string): void {
   const split = luvus(["pane", "split", "--no-focus"]);
   if (split.status !== 0) {
     toast("Couldn't open a pane for editing. Please try again.");
-    fail("edit-inline", `pane split failed (status ${split.status}): ${split.stderr.trim() || split.stdout.trim()}`);
+    fail(
+      "edit-inline",
+      `pane split failed (status ${split.status}): ${split.stderr.trim() || split.stdout.trim()}`,
+    );
   }
   let paneId: string;
   try {
@@ -116,7 +115,10 @@ function editInline(value: string): void {
   const run = luvus(["pane", "run", paneId, `${editor} '${abs}'`]);
   if (run.status !== 0) {
     toast("Couldn't start the editor in the new pane. Please try again.");
-    fail("edit-inline", `pane run failed (status ${run.status}): ${run.stderr.trim() || run.stdout.trim()}`);
+    fail(
+      "edit-inline",
+      `pane run failed (status ${run.status}): ${run.stderr.trim() || run.stdout.trim()}`,
+    );
   }
 }
 

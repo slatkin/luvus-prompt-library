@@ -28,9 +28,7 @@ function fail(context: string, detail: string): never {
 
 /** One line, bounded, for a toast: stderr if luvus wrote any, else stdout. */
 function summarize(res: { stdout: string; stderr: string }): string {
-  return (res.stderr.trim() || res.stdout.trim())
-    .replace(/\s+/g, " ")
-    .slice(0, 160);
+  return (res.stderr.trim() || res.stdout.trim()).replace(/\s+/g, " ").slice(0, 160);
 }
 
 /** The prompt's display name: the file name without `.md`. */

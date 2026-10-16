@@ -73,9 +73,7 @@ export function buildRows(root: string, expanded: ReadonlySet<string>): DockRow[
     // Spec: missing root — one muted row that names the folder, no other rows.
     return [{ text: `root not found: ${root}`, tone: "muted" }];
   }
-  return scanTree(root, expanded).map((row) =>
-    toDockRow(row, expanded.has(row.rel))
-  );
+  return scanTree(root, expanded).map((row) => toDockRow(row, expanded.has(row.rel)));
 }
 
 function toDockRow(row: TreeRow, isExpanded: boolean): DockRow {

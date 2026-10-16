@@ -26,10 +26,7 @@ interface SyncError {
  * Run a luvus CLI command as one argv array, no shell (design D4).
  * Never throws on a non-zero exit; the caller inspects `status`.
  */
-export function luvus(
-  args: readonly string[],
-  opts: { input?: string } = {},
-): LuvusResult {
+export function luvus(args: readonly string[], opts: { input?: string } = {}): LuvusResult {
   try {
     const stdout = execFileSync(luvusBinPath(), [...args], {
       shell: false,
@@ -87,9 +84,7 @@ export function moduleStateDir(): string {
  */
 export function readExpanded(dir: string): Set<string> {
   try {
-    const parsed: unknown = JSON.parse(
-      readFileSync(path.join(dir, "expanded.json"), "utf8"),
-    );
+    const parsed: unknown = JSON.parse(readFileSync(path.join(dir, "expanded.json"), "utf8"));
     if (!Array.isArray(parsed)) return new Set();
     return new Set(parsed.filter((v): v is string => typeof v === "string"));
   } catch {
@@ -99,10 +94,7 @@ export function readExpanded(dir: string): Set<string> {
 
 export function writeExpanded(dir: string, expanded: Iterable<string>): void {
   mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    path.join(dir, "expanded.json"),
-    `${JSON.stringify([...expanded], null, 2)}\n`,
-  );
+  writeFileSync(path.join(dir, "expanded.json"), `${JSON.stringify([...expanded], null, 2)}\n`);
 }
 
 /** One agent as `luvus agent list` reports it: the fields the module needs. */
@@ -189,11 +181,7 @@ export function splitSendValue(value: string): [string, string, string] {
   if (second === -1) {
     return [value.slice(0, first), "", value.slice(first + 1)];
   }
-  return [
-    value.slice(0, first),
-    value.slice(first + 1, second),
-    value.slice(second + 1),
-  ];
+  return [value.slice(0, first), value.slice(first + 1, second), value.slice(second + 1)];
 }
 
 /**
@@ -230,10 +218,7 @@ const byName = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
  * Relpaths use `/` separators on every platform so the expanded-set keys in
  * `expanded.json` are stable across platforms.
  */
-export function scanTree(
-  root: string,
-  expanded: ReadonlySet<string>,
-): TreeRow[] {
+export function scanTree(root: string, expanded: ReadonlySet<string>): TreeRow[] {
   const rows: TreeRow[] = [];
   const walk = (dir: string, rel: string, depth: number): void => {
     let entries: ReturnType<typeof readdirSync>;
@@ -259,7 +244,12 @@ export function scanTree(
       }
     }
     for (const name of files) {
-      rows.push({ rel: rel ? `${rel}/${name}` : name, name: name.slice(0, -3), depth, kind: "file" });
+      rows.push({
+        rel: rel ? `${rel}/${name}` : name,
+        name: name.slice(0, -3),
+        depth,
+        kind: "file",
+      });
     }
   };
   walk(root, "", 0);
