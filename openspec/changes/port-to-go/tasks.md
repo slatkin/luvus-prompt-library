@@ -21,7 +21,7 @@
 
 ## 5. Send (design D14, D16)
 
-- [ ] 5.1 Port `send.ts` to the `send` verb in `send.go`, with the BOM strip, the empty-prompt check, `--` before the text, and the toast text cut to 160 runes. Verify: the four ported `send` tests pass, calling the verb function in the test process with `t.Setenv` and a fake luvus call log.
+- [x] 5.1 Port `send.ts` to the `send` verb in `send.go`, with the BOM strip, the empty-prompt check, `--` before the text, and the toast text cut to 160 runes. Verify: the four ported `send` tests pass, calling the verb function in the test process with `t.Setenv` and a fake luvus call log.
 
 ## 6. Manifest switch (design D12)
 
