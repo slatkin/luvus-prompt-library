@@ -82,14 +82,14 @@ luvus module install slatkin/luvus-prompt-library
 ## Configure the prompt library root
 
 The dock reads the `root` module setting (Settings → your module
-configuration). Default: `~/prompts`. A leading `~` is expanded to your home
+configuration). Default: `~/.prompts`. A leading `~` is expanded to your home
 folder, and an empty value falls back to the default.
 
 Create the folder and add some markdown files:
 
 ```sh
-mkdir -p ~/prompts
-cat > ~/prompts/review.md <<'EOF'
+mkdir -p ~/.prompts
+cat > ~/.prompts/review.md <<'EOF'
 Review the current diff. List bugs first, then style nits.
 Keep it short.
 EOF

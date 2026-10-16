@@ -52,11 +52,11 @@ export function expandHome(p: string): string {
 }
 
 /**
- * Resolve a `root` value: trim it, treat an empty value as the `~/prompts`
+ * Resolve a `root` value: trim it, treat an empty value as the `~/.prompts`
  * default, and expand `~`.
  */
 export function resolveRoot(raw: string): string {
-  return path.resolve(expandHome(raw.trim() || "~/prompts"));
+  return path.resolve(expandHome(raw.trim() || "~/.prompts"));
 }
 
 /** The prompt library root: the `root` module setting, with `~` expanded. */

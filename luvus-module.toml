@@ -67,4 +67,4 @@ command = ["node", "send.ts"]
 key = "root"
 title = "Prompt library root"
 type = "string"
-default = "~/prompts"
+default = "~/.prompts"

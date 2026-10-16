@@ -23,7 +23,7 @@ import {
 } from "./lib.ts";
 
 test("expandHome expands a leading ~ to the home folder", () => {
-  assert.equal(expandHome("~/prompts"), path.join(homedir(), "prompts"));
+  assert.equal(expandHome("~/.prompts"), path.join(homedir(), ".prompts"));
   assert.equal(expandHome("~"), homedir());
 });
 
@@ -32,8 +32,8 @@ test("expandHome leaves plain and absolute paths alone", () => {
   assert.equal(expandHome("/tmp/prompts"), "/tmp/prompts");
 });
 
-test("resolveRoot defaults an empty setting to ~/prompts", () => {
-  assert.equal(resolveRoot(""), path.join(homedir(), "prompts"));
+test("resolveRoot defaults an empty setting to ~/.prompts", () => {
+  assert.equal(resolveRoot(""), path.join(homedir(), ".prompts"));
 });
 
 test("resolveRoot reads the root setting and expands ~", () => {
