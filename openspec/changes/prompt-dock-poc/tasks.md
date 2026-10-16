@@ -30,7 +30,7 @@
 
 ## 6. Interaction rework (spec: prompt-dock, agent-prompt-send)
 
-- [x] 6.1 Left-click selects instead of opening (supersedes the 3.1/3.2 entry point): prompt rows carry `action: "select"`, `select.ts` keeps the selection in `LUVUS_MODULE_STATE_DIR/selected.json`, and the selected row is drawn with `spans` (accent tone + `▌` marker) so its `text` stays the plain label. Verify: a left-click on a prompt creates no pane, shows the marker, and survives a restart.
+- [x] 6.1 Left-click selects instead of opening (supersedes the 3.1/3.2 entry point): prompt rows carry `action: "select"`, `select.ts` keeps the selection in `LUVUS_MODULE_STATE_DIR/selected.json`, and the selected row is drawn in the accent tone with a `done` dot — the closest a module dock row gets to the built-in docks' focused row, which also uses bold and a row background (design D10). Verify: a left-click on a prompt creates no pane, shows the accent row with its dot, and survives a restart.
 - [x] 6.2 Put opening in the row menu, in this order: "Send to" entries, `Open` (inline editor pane), `Edit in zed` / `Edit in VS Code`. Verify: the menu lists the send targets first, and `Open` starts the configured editor in a new pane.
 - [x] 6.3 Row colours and header: folders take `tone: "accent"`, prompts keep the default, and every push carries `--title PROMPTS`. Verify: the header reads `PROMPTS` in upper case.
 - [x] 6.4 Shorten the "Send to" labels to name, kind and pane (design D8), and drop the now-unused `status`/`workspace_name` from the parsed agent. Verify: a menu entry reads `bruv-orch (pi) · pane 12`.
@@ -38,5 +38,6 @@
 
 ## Workflow follow-up
 
+- Module dock rows cannot take a double-click in luvus 0.14.3: a row gets a left-click (its `action`) and a right-click (its `menu`) only, so "double-click opens the prompt" is not implementable from a module. Recorded in design D10; no upstream issue filed.
 - Roadmap items (edit-before-submit, stdin send path, PowerShell quoting, Commander `$prompt`) are tracked in roadmap issue #2, not in this change.
 - Archive the change after review.

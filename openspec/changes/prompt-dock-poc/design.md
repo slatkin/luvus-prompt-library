@@ -58,11 +58,14 @@ Use `spawn(editor, [absPath], {detached: true, stdio: "ignore"}).unref()`. Probe
 `<name> (<agent>) · pane <pane>`, or `<agent> · pane <pane>` when `name` is null. Short by decision: the menu holds one entry per live agent, so status and workspace_name are left out and the parsed agent no longer carries them.
 
 ### D9: Left-click selects; opening is a menu choice
-The dock has no selection state, so `select.ts` keeps it in `LUVUS_MODULE_STATE_DIR/selected.json` (a JSON string, or absent for no selection) and then repaints. The selected prompt is drawn with `spans` — an accent `▌ ` marker plus the accent-tone name — so `text` stays the plain label that the row action reads.
+The dock has no selection state, so `select.ts` keeps it in `LUVUS_MODULE_STATE_DIR/selected.json` (a JSON string, or absent for no selection) and then repaints.
 Alternative: keep `edit-inline` on the left-click and add selection later. Rejected: a stray click pulls focus into a new editor pane, which is the behaviour this rework removes.
 
-### D10: Row tones and the pushed title
-Folders take `tone: "accent"`; prompts keep the default row colour; the selected prompt takes accent plus its marker (D9). `refresh.ts` pushes `--title PROMPTS` on every push, because a push without a title leaves luvus titling the dock from its id.
+### D10: Row tones, the selected row, and the pushed title
+Folders take `tone: "accent"`; prompts keep the default row colour; the selected prompt takes accent plus a `done` status dot.
+The built-in docks mark their focused row with accent text **and bold, plus a row background** (`src/ui/workspace_row.rs`, `src/ui/sidebar.rs:809`). A module dock row cannot draw either: `DockRow` has no such field (`src/app/mod.rs:182`), and `draw_module_dock` styles each row with `Style::new().fg(...)` only (`src/ui/sidebar.rs:1020`). `tone: "accent"` is exactly `t.accent` (`src/bar/render.rs:164`), so the colour matches the native row; the dot is what separates the selected prompt from the folders, which are accent too. A true mirror needs a Luvus change.
+Double-click is unavailable for the same reason: a module row gets a left-click (its `action`) and a right-click (its `menu`) only, and the 400 ms double-click detector serves pane content and ORCH rows (`src/app/input.rs`), so a double-click just runs the action twice.
+`refresh.ts` pushes `--title PROMPTS` on every push, because a push without a title leaves luvus titling the dock from its id.
 
 ### D11: Send targets come from the focused workspace
 The context maps `LUVUS_WORKSPACE_ID` to `workspace.id` (`src/module/context.rs:157`), which is the focused workspace for CLI, socket, startup and event invocations — the same numeric id `agent list` reports as `workspace`. `refresh.ts` therefore keeps the agents whose id matches. Verified live: a `module run` probe reported `LUVUS_WORKSPACE_ID=3` for pane 12 in workspace 3.

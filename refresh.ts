@@ -25,22 +25,17 @@ import {
 const DOCK_ID = "prompts";
 const DOCK_TITLE = "PROMPTS";
 const INDENT = "  ";
-// The selected row carries a marker as well as the accent tone, so the selection
-// is still visible in a theme where accent sits close to the default text colour.
-const SELECTED_MARK = "▌ ";
-
-/** One segment of a row drawn from parts instead of plain `text` (docks API). */
-interface DockSpan {
-  text: string;
-  tone?: string;
-}
+// The dot on the selected row. A module dock row can set a status dot and a tone,
+// but not bold or a row background, so the accent tone plus a filled dot is the
+// closest a module gets to the focused row of the built-in docks.
+const SELECTED_DOT = "done";
 
 /** One row as `ui dock push` accepts it (JSON on stdin). */
 interface DockRow {
   text: string;
   tone?: string;
-  /** Drawn instead of `text` when present; `text` stays the plain label. */
-  spans?: DockSpan[];
+  /** A status dot: `idle` / `working` / `blocked` / `done`. */
+  dot?: string;
   action?: string;
   value?: string;
   menu?: DockMenuEntry[];
@@ -157,11 +152,10 @@ function toDockRow(
     ],
   };
   if (isSelected) {
-    // Keep `text` plain (actions read it) and draw the highlight in `spans`.
-    dockRow.spans = [
-      { text: `${indent}${SELECTED_MARK}`, tone: "accent" },
-      { text: row.name, tone: "accent" },
-    ];
+    // Mirrors the built-in docks' focused row as far as the dock API allows
+    // (design D10): accent text, which is the exact colour they use, plus a dot.
+    dockRow.tone = "accent";
+    dockRow.dot = SELECTED_DOT;
   }
   return dockRow;
 }

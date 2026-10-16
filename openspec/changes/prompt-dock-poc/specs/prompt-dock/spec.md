@@ -62,18 +62,18 @@ The right-click menu of a prompt row SHALL have an "Edit in zed" entry only when
 - **THEN** zed opens the file and the module action finishes at once
 
 ### Requirement: Select a prompt
-A left-click on a prompt row SHALL select that prompt and SHALL NOT open it. The selected row SHALL be drawn in the accent tone with a `▌` marker before its name. The selection SHALL persist across luvus restarts. A prompt that is no longer in the library SHALL NOT draw as selected.
+A left-click on a prompt row SHALL select that prompt and SHALL NOT open it. The selected row SHALL be drawn in the accent tone with a status dot before its name. Luvus gives a module dock row no bold and no row background, so the accent tone and the dot are the closest available match to the focused row of the built-in docks. The selection SHALL persist across luvus restarts. A prompt that is no longer in the library SHALL NOT draw as selected.
 
 #### Scenario: Left-click selects
 - **WHEN** the user left-clicks the prompt row `plan`
-- **THEN** `plan` is drawn with the marker, no pane is created, and no editor starts
+- **THEN** `plan` is drawn in the accent tone with a dot, no pane is created, and no editor starts
 
 #### Scenario: Selection survives restart
 - **WHEN** `plan` is selected and luvus restarts
 - **THEN** the dock repaints with `plan` still drawn as selected
 
 ### Requirement: Row colours
-Folder rows SHALL use the accent tone. Prompt rows SHALL use the default row colour, except a selected prompt row, which SHALL use the accent tone with its marker.
+Folder rows SHALL use the accent tone. Prompt rows SHALL use the default row colour, except a selected prompt row, which SHALL use the accent tone with a status dot.
 
 #### Scenario: Folders are distinct from prompts
 - **WHEN** the dock shows a folder row and a prompt row
