@@ -7,9 +7,9 @@
 
 ## 2. Tree dock (spec: prompt-dock)
 
-- [ ] 2.1 Implement the tree scan in `lib.ts`: depth-first, folders before files, sorted by name, `.md` only, hidden entries skipped, collapsed folders' children left out. Verify: `lib.test.ts` builds a temp tree that matches the "Nested library" and "Ignored files" scenarios and checks the row order and indentation.
-- [ ] 2.2 Implement `refresh.ts` to build rows (folder `▸/▾`, prompt names without `.md`, the missing-root muted row) and push them with `ui dock push` through stdin. Verify: run `luvus module run <id> refresh` with a sample `~/prompts`. The dock shows the tree, and a non-existent root shows the single muted row.
-- [ ] 2.3 Implement `toggle.ts` to keep the expanded set in `LUVUS_MODULE_STATE_DIR/expanded.json` (treat a corrupt or missing file as empty) and then run refresh. Verify: clicking a folder expands and collapses it, and the state survives a luvus restart.
+- [x] 2.1 Implement the tree scan in `lib.ts`: depth-first, folders before files, sorted by name, `.md` only, hidden entries skipped, collapsed folders' children left out. Verify: `lib.test.ts` builds a temp tree that matches the "Nested library" and "Ignored files" scenarios and checks the row order and indentation.
+- [x] 2.2 Implement `refresh.ts` to build rows (folder `▸/▾`, prompt names without `.md`, the missing-root muted row) and push them with `ui dock push` through stdin. Verify: run `luvus module run <id> refresh` with a sample `~/prompts`. The dock shows the tree, and a non-existent root shows the single muted row.
+- [x] 2.3 Implement `toggle.ts` to keep the expanded set in `LUVUS_MODULE_STATE_DIR/expanded.json` (treat a corrupt or missing file as empty) and then run refresh. Verify: clicking a folder expands and collapses it, and the state survives a luvus restart.
 
 ## 3. Editing (spec: prompt-dock)
 
