@@ -20,12 +20,6 @@ func notImplemented(verb string) error {
 	return fmt.Errorf("%s: not implemented", verb)
 }
 
-// runToggle expands or collapses a folder row (task 3.3).
-func runToggle() error { return notImplemented("toggle") }
-
-// runSelect selects a prompt row (task 3.3).
-func runSelect() error { return notImplemented("select") }
-
 // runEditInline opens a prompt in a split pane (task 4.1). It replaces the
 // LUVUS_MODULE_ACTION_ID branch of edit.ts.
 func runEditInline() error { return notImplemented("edit-inline") }

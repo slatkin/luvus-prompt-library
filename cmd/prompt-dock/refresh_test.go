@@ -192,6 +192,21 @@ func fakeLuvus(t *testing.T, stdout string) string {
 	return script
 }
 
+// fakeLuvusLog builds a fake `luvus` binary that logs each call's argv, one
+// per line, to a log file, and exits 0 with no output. It returns the log
+// path, so tests can count the calls they caused.
+func fakeLuvusLog(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	log := filepath.Join(dir, "calls.log")
+	script := filepath.Join(dir, "fake-luvus")
+	body := "#!/bin/sh\nPATH=/usr/bin:/bin\necho \"$@\" >> " + log + "\ncat > /dev/null\n"
+	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return log
+}
+
 func TestSendMenuEntriesOneSendToEntryPerAgentNoTerminalIdEncodesAsEmpty(t *testing.T) {
 	skipOnWindows(t)
 	hex := strings.Repeat("c", 32)
