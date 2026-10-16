@@ -16,8 +16,8 @@
 
 ## 4. Editing (design D14, D15)
 
-- [ ] 4.1 Port the inline mode of `edit.ts` to the `edit-inline` verb in `edit.go`: `resolveInlineEditor`, the `~/.luvus/config.json` read, the path check for `'`, `\`, and line breaks, `pane split --no-focus`, `pane run`, and the pane close after a failed run. Verify: the ported `resolveInlineEditor` tests pass, plus fake-luvus tests where the `pane split` reply carries `pane` as a string, as a number, and in a flat object.
-- [ ] 4.2 Port the external mode to the `edit-external` verb, with `detach_other.go` (`//go:build !windows`, `Setsid`) and `detach_windows.go` (`DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP`). Remove the `shell: true` branch, and keep a `ponytail:` comment about `%` and `&` in Windows batch arguments. Verify: the ported `splitExternalValue` test passes, a test shows that an unknown editor and a malformed value return errors, and `GOOS=windows go vet ./...` succeeds on Linux.
+- [x] 4.1 Port the inline mode of `edit.ts` to the `edit-inline` verb in `edit.go`: `resolveInlineEditor`, the `~/.luvus/config.json` read, the path check for `'`, `\`, and line breaks, `pane split --no-focus`, `pane run`, and the pane close after a failed run. Verify: the ported `resolveInlineEditor` tests pass, plus fake-luvus tests where the `pane split` reply carries `pane` as a string, as a number, and in a flat object.
+- [x] 4.2 Port the external mode to the `edit-external` verb, with `detach_other.go` (`//go:build !windows`, `Setsid`) and `detach_windows.go` (`DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP`). Remove the `shell: true` branch, and keep a `ponytail:` comment about `%` and `&` in Windows batch arguments. Verify: the ported `splitExternalValue` test passes, a test shows that an unknown editor and a malformed value return errors, and `GOOS=windows go vet ./...` succeeds on Linux.
 
 ## 5. Send (design D14, D16)
 
