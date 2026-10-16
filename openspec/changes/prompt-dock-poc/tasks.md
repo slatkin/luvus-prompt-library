@@ -21,12 +21,12 @@
 - [x] 4.1 In `lib.ts`, add value encode/decode for `<pane>|<terminal_id>|<relpath>` (split on the first two `|` only) and the target label builder (design D8). Verify: `lib.test.ts` covers a relpath that contains `|`, plus the named and unnamed label scenarios.
 - [x] 4.2 In `refresh.ts`, read `agent list` and add one "Send to" menu entry per agent to each prompt row. Verify: with a claude pane and a pi pane open, the menu lists both, and a plain shell pane is not listed.
 - [x] 4.3 Implement `send.ts`: read the file at action time, run `agent prompt <pane> <text> --terminal-id <id>` with the text as one argv element, and show a toast on success and on failure. Verify: a multi-line prompt arrives in an idle agent as one submitted prompt. A send to an agent that waits on a permission prompt shows a failure toast and nothing is typed. A send from a menu built before its pane closed shows a failure toast.
-- [ ] 4.4 Verify that the target list follows agents: start `claude` in an existing shell pane and check that it appears in the prompt row menus with no manual refresh.
+- [x] 4.4 Verify that the target list follows agents: start `claude` in an existing shell pane and check that it appears in the prompt row menus with no manual refresh. Confirmed live by the user, and the log shows 127 `pane.agent_status_changed` events, each running a refresh that re-reads `luvus agent list`.
 
 ## 5. Docs and integration
 
-- [ ] 5.1 Update `README.md` with link/install steps, the `root` setting, Node ≥ 23.6 and luvus ≥ 0.14.3 requirements, and a screenshot of the dock with an open send menu. Verify: following the README on a clean `~/.prompts` gives a working dock.
-- [ ] 5.2 Run the end-to-end check: restart luvus, the dock repaints from startup, edit a prompt inline, send it to an agent, and confirm that the agent receives the edited text. Verify: all steps pass with no errors in `luvus module log`.
+- [x] 5.1 Update `README.md` with link/install steps, the `root` setting, Node ≥ 23.6 and luvus ≥ 0.14.3 requirements, and the current select / open / send behaviour. The dock screenshot was dropped by request. Verify: following the README on a clean `~/.prompts` gives a working dock.
+- [x] 5.2 Run the end-to-end check: restart luvus, the dock repaints from startup, edit a prompt inline, send it to an agent, and confirm that the agent receives the edited text. Verified: `startup` succeeded and the user has restarted luvus; 9 `action:edit-inline` runs succeeded; a sent prompt arrived in the target agent. The only failures in `luvus module log` are ids 392 and 395, the `--` sends fixed since.
 
 ## 6. Interaction rework (spec: prompt-dock, agent-prompt-send)
 

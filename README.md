@@ -1,15 +1,14 @@
 # luvus-prompt-library
 
 A luvus module: a sidebar dock for stored prompts kept as hierarchical
-markdown files. Browse the library as a folder tree, edit a prompt inline
-(the luvus "Open files with" editor, fallback `nvim`) or in an external
-editor (zed, VS Code), and send it to any live agent with one menu click.
-Sending pastes the prompt into the agent and submits it in one step.
+markdown files. Browse the library as a folder tree, click a prompt to select
+it, then open it in the luvus "Open files with" editor (fallback `nvim`) or in
+an external editor (zed, VS Code) from the right-click menu. That menu also
+sends the prompt to a live agent in one click: the text is pasted into the
+agent and submitted in one step.
 
 Status: proof of concept. Planned follow-ups are tracked in
 [issue #2](https://github.com/slatkin/luvus-prompt-library/issues/2).
-
-<!-- TODO screenshot: dock with open send menu -->
 
 ## What the dock does
 
@@ -22,22 +21,26 @@ prompt library root as a folder tree:
 - If the root folder does not exist, the dock shows a single muted row that
   names the missing folder.
 
-**Editing.** Click a prompt row to open it in the editor luvus uses for
-"Open files with" (`layout.file_open` in `~/.luvus/config.json`). When that
-setting is empty, `readonly`, or unreadable, the file opens in `nvim`. The
-editor opens in a new split pane. Right-clicking a prompt row also offers
-"Open in zed" and "Open in VS Code" — each entry appears only when the
-binary is on `PATH`.
+**Selecting.** A left-click on a prompt row only selects it — it never opens
+an editor. The selected row is drawn in the accent colour with a dot, kept in
+the module state directory, and survives a restart.
 
-**Sending.** Right-click a prompt and pick **Send to &lt;agent&gt;**. One
-entry is listed per live agent (from `luvus agent list`), labelled with its name
-or agent and pane, status, and workspace. Plain shell panes
-do not show. Sending pastes the prompt text into the agent and submits it in
-one atomic request. The file is read at send time, so edits saved after the
-last dock repaint go out. If the agent is not ready (for example it is
-waiting on a permission prompt), nothing is queued and a toast tells you the
-send failed. A send target from a stale menu is rejected if the pane now
-runs a different agent.
+**Opening.** Right-click a prompt row and pick **Open** to open it in the
+editor luvus uses for "Open files with" (`layout.file_open` in
+`~/.luvus/config.json`). When that setting is empty, `readonly`, or
+unreadable, the file opens in `nvim`. The editor opens in a new split pane.
+The same menu offers **Edit in zed** and **Edit in VS Code**, each entry only
+when the binary is on `PATH`.
+
+**Sending.** The right-click menu lists one **Send to &lt;agent&gt;** entry per
+live agent in the current workspace (from `luvus agent list`), above the Open
+and Edit entries. Each label names the agent's alias or kind and its pane.
+Plain shell panes do not show. Sending pastes the prompt text into the agent
+and submits it in one atomic request. The file is read at send time, so edits
+saved after the last dock repaint go out. If the agent is not ready (for
+example it is waiting on a permission prompt), nothing is queued and a toast
+tells you the send failed. A send target from a stale menu is rejected if the
+pane now runs a different agent.
 
 The dock repaints itself on startup, on workspace/pane lifecycle events, and
 when an agent's status changes, so new agents appear without a manual
@@ -107,9 +110,6 @@ appears.
 
 ## Known limits
 
-- A prompt that **starts with `--`** is read as an option by
-  `luvus agent prompt` and the send fails with a toast. Rename the file's
-  content to start with text, or wait for the stdin send path (issue #2).
 - Very large prompts can exceed the argv size limit (about 32 K chars on
   Windows, 128 KB per argument on Linux). Same roadmap item.
 - Inline editing quotes the file path for POSIX shells (sh, bash, zsh,
@@ -118,6 +118,9 @@ appears.
   issue #2.
 - The dock does not watch the filesystem; it repaints on luvus events and on
   the **Refresh prompts** action, not on file changes.
+- Luvus fires no event when you switch workspaces, so the **Send to** entries
+  follow the workspace on the next repaint: a pane opening or closing, an
+  agent status change, or any click in the dock.
 
 Roadmap (edit-before-submit, stdin send path, PowerShell quoting, Commander
 `$prompt` exposure) is tracked in
