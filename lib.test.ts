@@ -1,17 +1,28 @@
 // lib.test.ts — run with `node --test`.
 import assert from "node:assert/strict";
-import { chmodSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { homedir } from "node:os";
+import { spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
-import { findOnPath, resolveInlineEditor, splitExternalValue } from "./edit.ts";
+import { resolveInlineEditor, splitExternalValue } from "./edit.ts";
 import { editorMenuEntries, sendMenuEntries } from "./refresh.ts";
 
 import {
   encodeSendValue,
   expandHome,
+  findOnPath,
   parseAgents,
   readExpanded,
   resolveRoot,
@@ -22,9 +33,13 @@ import {
   writeExpanded,
 } from "./lib.ts";
 
+// Tests that run a POSIX shell script or create symlinks are skipped on Windows.
+const posixOnly = { skip: process.platform === "win32" };
+
 test("expandHome expands a leading ~ to the home folder", () => {
   assert.equal(expandHome("~/.prompts"), path.join(homedir(), ".prompts"));
   assert.equal(expandHome("~"), homedir());
+  assert.equal(expandHome("~\\prompts"), path.join(homedir(), "prompts"));
 });
 
 test("expandHome leaves plain and absolute paths alone", () => {
@@ -39,13 +54,13 @@ test("resolveRoot defaults an empty setting to ~/.prompts", () => {
 test("resolveRoot reads the root setting and expands ~", () => {
   assert.equal(resolveRoot("~/notes"), path.join(homedir(), "notes"));
   assert.equal(resolveRoot("  ~/notes  "), path.join(homedir(), "notes"));
-  assert.equal(resolveRoot("/tmp/prompts"), "/tmp/prompts");
+  assert.equal(resolveRoot("/tmp/prompts"), path.resolve("/tmp/prompts"));
 });
 
 test("resolveUnderRoot resolves relpaths inside the root", () => {
-  const root = "/tmp/library";
-  assert.equal(resolveUnderRoot(root, "plan.md"), "/tmp/library/plan.md");
-  assert.equal(resolveUnderRoot(root, "review/rust.md"), "/tmp/library/review/rust.md");
+  const root = path.resolve("/tmp/library");
+  assert.equal(resolveUnderRoot(root, "plan.md"), path.join(root, "plan.md"));
+  assert.equal(resolveUnderRoot(root, "review/rust.md"), path.join(root, "review", "rust.md"));
 });
 
 test("resolveUnderRoot rejects a relpath that escapes the root", () => {
@@ -95,19 +110,34 @@ test("scanTree: a collapsed folder leaves its children out", () => {
   rmSync(root, { recursive: true, force: true });
 });
 
-test("scanTree: ignored files — non-.md files and hidden entries never show", () => {
+test("scanTree: symlinks show as their targets, and a folder loop stops", posixOnly, () => {
   const root = tempLibrary();
-  const rows = scanTree(root, new Set(["review"]));
-  const names = rows.map((r) => r.name);
-  assert.ok(!names.includes("notes.txt"));
-  assert.ok(!names.includes(".git"));
-  assert.ok(!names.includes(".hidden.md"));
-  assert.ok(!rows.some((r) => r.rel.includes(".git/")));
+  symlinkSync(path.join(root, "plan.md"), path.join(root, "linked.md"));
+  symlinkSync(path.join(root, "review"), path.join(root, "alias"), "dir");
+  symlinkSync(root, path.join(root, "review", "up"), "dir");
+  const rows = scanTree(root, new Set(["alias", "review", "review/up"]));
+  assert.deepEqual(
+    rows.map((r) => [r.rel, r.depth, r.kind]),
+    [
+      ["alias", 0, "folder"],
+      ["alias/up", 1, "folder"],
+      ["alias/rust.md", 1, "file"],
+      ["alias/ts.md", 1, "file"],
+      ["review", 0, "folder"],
+      ["review/up", 1, "folder"],
+      ["review/rust.md", 1, "file"],
+      ["review/ts.md", 1, "file"],
+      ["linked.md", 0, "file"],
+      ["plan.md", 0, "file"],
+    ],
+  );
   rmSync(root, { recursive: true, force: true });
 });
 
 test("readExpanded treats a missing or corrupt file as empty", () => {
-  assert.deepEqual(readExpanded(tmpdir()), new Set());
+  const empty = mkdtempSync(path.join(tmpdir(), "prompt-dock-state-"));
+  assert.deepEqual(readExpanded(empty), new Set());
+  rmSync(empty, { recursive: true, force: true });
   const dir = mkdtempSync(path.join(tmpdir(), "prompt-dock-state-"));
   writeFileSync(path.join(dir, "expanded.json"), "{not json");
   assert.deepEqual(readExpanded(dir), new Set());
@@ -137,7 +167,7 @@ test("resolveInlineEditor falls back to nvim when empty, readonly, or missing", 
   assert.equal(resolveInlineEditor("readonly"), "nvim");
 });
 
-test("findOnPath finds a binary that exists on PATH (sh)", () => {
+test("findOnPath finds a binary that exists on PATH (sh)", posixOnly, () => {
   assert.equal(findOnPath("sh"), true);
 });
 
@@ -146,16 +176,18 @@ test("findOnPath returns false for a missing binary", () => {
 });
 
 test("editorMenuEntries use the editor|relpath encoding", () => {
-  const entries = editorMenuEntries("review/plan.md");
-  const zed = entries.find((e) => e.title === "Open in zed");
-  assert.ok(zed, "zed entry present when zed is on PATH");
-  assert.equal(zed.action, "edit-external");
-  assert.equal(zed.value, "zed|review/plan.md");
-  const code = entries.find((e) => e.title === "Open in VS Code");
-  if (code) {
-    assert.equal(code.action, "edit-external");
-    assert.equal(code.value, "code|review/plan.md");
-  }
+  // Editors are passed in, so the test does not depend on what is on PATH.
+  const entries = editorMenuEntries("review/plan.md", [
+    { bin: "zed", title: "Open in zed" },
+    { bin: "code", title: "Open in VS Code" },
+  ]);
+  assert.deepEqual(
+    entries.map((e) => [e.title, e.action, e.value]),
+    [
+      ["Open in zed", "edit-external", "zed|review/plan.md"],
+      ["Open in VS Code", "edit-external", "code|review/plan.md"],
+    ],
+  );
 });
 
 test("splitExternalValue splits on the first | only, so | in a filename works", () => {
@@ -166,9 +198,9 @@ test("splitExternalValue splits on the first | only, so | in a filename works", 
 
 // ---- send targets (tasks 4.1 / 4.2) ----
 
-test("encodeSendValue then splitSendValue round-trips, even with | in the file name", () => {
-  const value = encodeSendValue("118", "a".repeat(32), "weird|name.md");
-  assert.deepEqual(splitSendValue(value), ["118", "a".repeat(32), "weird|name.md"]);
+test("encodeSendValue then splitSendValue round-trips a send value", () => {
+  const value = encodeSendValue("118", "a".repeat(32), "plan.md");
+  assert.deepEqual(splitSendValue(value), ["118", "a".repeat(32), "plan.md"]);
 });
 
 test("splitSendValue splits on the first two | only, so | in a relpath works", () => {
@@ -240,7 +272,7 @@ test("parseAgents reads the agent array out of the CLI envelope", () => {
   );
 });
 
-test("parseAgents tolerates a bare agents object, a bare array, and garbage", () => {
+test("parseAgents returns no agents for other shapes, nulls, and garbage", () => {
   const agent = {
     pane: "7",
     agent: "codex",
@@ -249,9 +281,11 @@ test("parseAgents tolerates a bare agents object, a bare array, and garbage", ()
     status: "idle",
     workspace_name: "w",
   };
-  assert.equal(parseAgents(JSON.stringify({ agents: [agent] })).length, 1);
-  assert.equal(parseAgents(JSON.stringify([agent])).length, 1);
+  assert.deepEqual(parseAgents(JSON.stringify({ agents: [agent] })), []);
+  assert.deepEqual(parseAgents(JSON.stringify([agent])), []);
   assert.deepEqual(parseAgents("not json"), []);
+  assert.deepEqual(parseAgents("null"), []);
+  assert.deepEqual(parseAgents(JSON.stringify({ result: { agents: [null, 5] } })), []);
   assert.deepEqual(parseAgents(JSON.stringify({ other: true })), []);
 });
 
@@ -264,46 +298,102 @@ function fakeLuvus(stdout: string): string {
   return script;
 }
 
-test("sendMenuEntries: one Send to entry per guarded agent, none for the rest", () => {
-  const hex = "c".repeat(32);
-  const script = fakeLuvus(
-    JSON.stringify({
-      id: "1",
-      result: {
-        agents: [
-          {
-            pane: "9",
-            agent: "pi",
-            terminal_id: hex,
-            name: "pipi",
-            status: "idle",
-            workspace_name: "pi-luvus",
-          },
-          {
-            pane: "10",
-            agent: "claude",
-            terminal_id: null,
-            name: null,
-            status: "working",
-            workspace_name: "mbv",
-          },
+test(
+  "sendMenuEntries: one Send to entry per agent; no terminal id encodes as empty",
+  posixOnly,
+  () => {
+    const hex = "c".repeat(32);
+    const script = fakeLuvus(
+      JSON.stringify({
+        id: "1",
+        result: {
+          agents: [
+            {
+              pane: "9",
+              agent: "pi",
+              terminal_id: hex,
+              name: "pipi",
+              status: "idle",
+              workspace_name: "pi-luvus",
+            },
+            {
+              pane: "10",
+              agent: "claude",
+              terminal_id: null,
+              name: null,
+              status: "working",
+              workspace_name: "mbv",
+            },
+          ],
+        },
+      }),
+    );
+    const prevBin = process.env.LUVUS_BIN_PATH;
+    process.env.LUVUS_BIN_PATH = script;
+    try {
+      const entries = sendMenuEntries("plan.md");
+      assert.deepEqual(
+        entries.map((e) => [e.action, e.value]),
+        [
+          ["send", `9|${hex}|plan.md`],
+          ["send", "10||plan.md"],
         ],
-      },
-    }),
-  );
-  const prevBin = process.env.LUVUS_BIN_PATH;
-  process.env.LUVUS_BIN_PATH = script;
-  try {
-    const entries = sendMenuEntries("plan.md");
-    // The agent without a terminal id cannot be guarded, so it gets no entry.
-    assert.equal(entries.length, 1);
-    assert.ok(entries[0].title.startsWith("Send to "), entries[0].title);
-    assert.ok(entries[0].title.includes("pipi"), entries[0].title);
-    assert.equal(entries[0].action, "send");
-    assert.equal(entries[0].value, `9|${hex}|plan.md`);
-  } finally {
-    if (prevBin === undefined) delete process.env.LUVUS_BIN_PATH;
-    else process.env.LUVUS_BIN_PATH = prevBin;
-    rmSync(path.dirname(script), { recursive: true, force: true });
-  }
+      );
+      assert.ok(entries[0].title.includes("pipi"), entries[0].title);
+      assert.ok(entries[1].title.startsWith("Send to "), entries[1].title);
+    } finally {
+      if (prevBin === undefined) delete process.env.LUVUS_BIN_PATH;
+      else process.env.LUVUS_BIN_PATH = prevBin;
+      rmSync(path.dirname(script), { recursive: true, force: true });
+    }
+  },
+);
+
+/** Run send.ts with a fake luvus that logs each call; returns exit status and the log. */
+function runSend(value: string, root: string): { status: number | null; calls: string } {
+  const dir = mkdtempSync(path.join(tmpdir(), "prompt-dock-send-"));
+  const log = path.join(dir, "calls.log");
+  const script = path.join(dir, "fake-luvus");
+  writeFileSync(script, `#!/bin/sh\necho "$@" >> "${log}"\n`);
+  chmodSync(script, 0o755);
+  const sendScript = fileURLToPath(new URL("./send.ts", import.meta.url));
+  const res = spawnSync(process.execPath, [sendScript], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      LUVUS_BIN_PATH: script,
+      LUVUS_SETTING_ROOT: root,
+      LUVUS_MODULE_ROW_VALUE: value,
+    },
+  });
+  const calls = existsSync(log) ? readFileSync(log, "utf8") : "";
+  rmSync(dir, { recursive: true, force: true });
+  return { status: res.status, calls };
+}
+
+test("send refuses an agent with no terminal id before any agent prompt call", posixOnly, () => {
+  const root = tempLibrary();
+  const { status, calls } = runSend("9||plan.md", root);
+  assert.notEqual(status, 0);
+  assert.ok(calls.includes("Send to pane 9 failed: no terminal id"), calls);
+  assert.ok(!calls.includes("agent prompt"), calls);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("send refuses an empty prompt file and names the agent", posixOnly, () => {
+  const root = tempLibrary();
+  writeFileSync(path.join(root, "empty.md"), "  \n");
+  const { status, calls } = runSend(`9|${"d".repeat(32)}|empty.md`, root);
+  assert.notEqual(status, 0);
+  assert.ok(calls.includes('Send to pane 9 failed: "empty" is empty.'), calls);
+  assert.ok(!calls.includes("agent prompt"), calls);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("send's read-failure toast names the agent", posixOnly, () => {
+  const root = tempLibrary();
+  const { status, calls } = runSend(`9|${"d".repeat(32)}|missing.md`, root);
+  assert.notEqual(status, 0);
+  assert.ok(calls.includes('Send to pane 9 failed: couldn\'t read "missing".'), calls);
+  rmSync(root, { recursive: true, force: true });
 });

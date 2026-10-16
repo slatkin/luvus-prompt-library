@@ -1,5 +1,8 @@
 # Prompt Dock — a luvus module plan
 
+> Historical plan. The shipped design is in `openspec/changes/prompt-dock-poc` and
+> the README. Names and versions in this file are out of date.
+
 ## Context
 
 A luvus module that adds a sidebar dock for stored prompts:

@@ -8,23 +8,13 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import path from "node:path";
-import { readFileSync, statSync } from "node:fs";
-import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
 
-import { luvus, resolveUnderRoot, settingRoot } from "./lib.ts";
+import { fail, isMain, luvus, resolveUnderRoot, settingRoot, toast } from "./lib.ts";
 
 const FALLBACK_EDITOR = "nvim";
-
-/** Show a one-line message in the UI (design Context). */
-function toast(text: string): void {
-  luvus(["ui", "toast", text]);
-}
-
-/** Fail loudly in `luvus module log` and stop (non-zero exit). */
-function fail(context: string, detail: string): never {
-  console.error(`${context}: ${detail}`);
-  throw new Error(`${context}: ${detail}`);
-}
+// The external editors refresh.ts offers; anything else is refused.
+const EXTERNAL_EDITORS = ["zed", "code"];
 
 /**
  * Read luvus "Open files with" from ~/.luvus/config.json (design D6).
@@ -52,42 +42,21 @@ export function resolveInlineEditor(raw: string | null): string {
   return value;
 }
 
-/**
- * Stdlib PATH probe (design D7): split PATH and check each folder for the
- * binary. On Windows, PATHEXT extensions are appended so `code` also matches
- * `code.cmd`. No `which` dependency.
- */
-export function findOnPath(bin: string): boolean {
-  const pathEnv = process.env.PATH || "";
-  const exts =
-    process.platform === "win32" ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";") : [""];
-  for (const dir of pathEnv.split(path.delimiter)) {
-    if (!dir) continue;
-    for (const ext of exts) {
-      const candidate = path.join(dir, bin + ext.toLowerCase());
-      try {
-        if (statSync(candidate).isFile()) return true;
-      } catch {
-        // not here — keep scanning
-      }
-    }
-  }
-  return false;
-}
-
 /** Inline mode: split a pane without focusing it, then type the editor command. */
 function editInline(value: string): void {
   const root = settingRoot();
   const abs = resolveUnderRoot(root, value);
   if (!abs) {
-    toast(`That file is outside your prompt library root, so it can't be opened.`);
+    toast("That file is outside your prompt library root, so it can't be opened.");
     fail("edit-inline", `relpath escapes root: ${value}`);
   }
-  if (abs.includes("'")) {
-    // `pane run` types the command into a shell, so the path must be
-    // single-quoted; an apostrophe in the name would break the quoting.
-    toast("Files with an apostrophe in the name can't be opened inline. Please rename the file.");
-    fail("edit-inline", `path contains a single quote: ${abs}`);
+  if (/['\\\r\n]/.test(abs)) {
+    // `pane run` types the command into a shell, so the path must be single-quoted;
+    // an apostrophe, a backslash (fish reads \\ as one \), or a line break would break it.
+    toast(
+      "Files with an apostrophe, a backslash, or a line break in the name can't be opened inline. Please rename the file.",
+    );
+    fail("edit-inline", `path contains a quote, backslash, or line break: ${abs}`);
   }
 
   const editor = resolveInlineEditor(readRawFileOpen());
@@ -101,8 +70,9 @@ function editInline(value: string): void {
   }
   let paneId: string;
   try {
+    // luvus prints the RPC envelope; a flat object is accepted too.
     const parsed = JSON.parse(split.stdout);
-    paneId = String(parsed.pane);
+    paneId = String((parsed.result ?? parsed).pane);
   } catch {
     toast("Couldn't open a pane for editing. Please try again.");
     fail("edit-inline", `unexpected pane split output: ${split.stdout.trim()}`);
@@ -114,6 +84,8 @@ function editInline(value: string): void {
 
   const run = luvus(["pane", "run", paneId, `${editor} '${abs}'`]);
   if (run.status !== 0) {
+    // Close the pane we just split, so a failed run leaves no empty pane behind.
+    luvus(["pane", "close", paneId]);
     toast("Couldn't start the editor in the new pane. Please try again.");
     fail(
       "edit-inline",
@@ -136,15 +108,23 @@ export function splitExternalValue(value: string): [string, string] {
 function editExternal(value: string): void {
   const [editor, rel] = splitExternalValue(value);
   if (!editor) fail("edit-external", `malformed value (expected <editor>|<relpath>): ${value}`);
+  if (!EXTERNAL_EDITORS.includes(editor)) fail("edit-external", `unknown editor: ${editor}`);
 
   const abs = resolveUnderRoot(settingRoot(), rel);
   if (!abs) {
-    toast(`That file is outside your prompt library root, so it can't be opened.`);
+    toast("That file is outside your prompt library root, so it can't be opened.");
     fail("edit-external", `relpath escapes root: ${rel}`);
   }
 
   try {
-    const child = spawn(editor, [abs], { detached: true, stdio: "ignore" });
+    // Windows starts `code` through its .cmd shim, which spawn can't run without a
+    // shell, so the path is quoted for cmd. ponytail: cmd still expands %VAR% inside quotes.
+    const win = process.platform === "win32";
+    const child = spawn(editor, [win ? `"${abs}"` : abs], {
+      detached: true,
+      stdio: "ignore",
+      shell: win,
+    });
     // A failed launch (e.g. binary vanished) must not crash the action.
     child.on("error", (err) => {
       console.error(`edit-external: spawn error: ${err}`);
@@ -171,16 +151,4 @@ function runEdit(): void {
   }
 }
 
-// Run only when executed directly (as the module action), so refresh.ts and
-// the tests can import helpers without triggering an edit or an early exit.
-function isMain(): boolean {
-  const entry = process.argv[1];
-  if (!entry) return false;
-  try {
-    return pathToFileURL(entry).href === import.meta.url;
-  } catch {
-    return false;
-  }
-}
-
-if (isMain()) runEdit();
+if (isMain(import.meta.url)) runEdit();
