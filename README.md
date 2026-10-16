@@ -43,9 +43,11 @@ prompt library root as a folder tree:
   names the missing folder.
 
 **Selecting.** A left-click on a prompt row only selects it — it never opens
-an editor. The selected row is drawn in the accent colour and adds no marker
-of its own, since every prompt row already carries the chat glyph. The choice
-is kept in the module state directory and survives a restart.
+an editor. The selected row's glyph and name are drawn in the accent colour and
+the row adds no marker of its own, since every prompt row already carries the
+chat glyph. The branch prefix keeps the normal row colour, so selecting a row
+never recolours the tree. The choice is kept in the module state directory and
+survives a restart.
 
 **Opening.** Right-click a prompt row and pick **Open** to open it in the
 editor luvus uses for "Open files with" (`layout.file_open` in

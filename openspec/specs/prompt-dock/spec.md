@@ -81,22 +81,30 @@ The right-click menu of a prompt row SHALL have an "Edit in zed" entry only when
 - **THEN** zed opens the file and the module action finishes at once
 
 ### Requirement: Select a prompt
-A left-click on a prompt row SHALL select that prompt and SHALL NOT open it. The selected row SHALL be drawn in the accent tone and SHALL NOT add a marker glyph of its own. Luvus gives a module dock row no bold and no row background, so the accent tone is the closest available match to the focused row of the built-in docks. The selection SHALL persist across luvus restarts. A prompt that is no longer in the library SHALL NOT draw as selected.
+A left-click on a prompt row SHALL select that prompt and SHALL NOT open it. The glyph and name of the selected row SHALL be drawn in the accent tone, and the row SHALL NOT add a marker glyph of its own. The branch prefix SHALL keep the default row colour. Luvus gives a module dock row no bold and no row background, so the accent tone is the closest available match to the focused row of the built-in docks. The selection SHALL persist across luvus restarts. A prompt that is no longer in the library SHALL NOT draw as selected.
 
 #### Scenario: Left-click selects
 - **WHEN** the user left-clicks the prompt row `plan`
 - **THEN** `plan` is drawn in the accent tone, no pane is created, and no editor starts
+
+#### Scenario: Selecting a child row does not recolour the tree
+- **WHEN** the user left-clicks a prompt row that carries a `  └─ ` prefix
+- **THEN** the `md-chat` glyph and the file name are accent-toned and the `  └─ ` prefix keeps the default row colour
 
 #### Scenario: Selection survives restart
 - **WHEN** `plan` is selected and luvus restarts
 - **THEN** the dock repaints with `plan` still drawn as selected
 
 ### Requirement: Row colours
-Folder rows SHALL use the accent tone. Prompt rows SHALL use the default row colour, except a selected prompt row, which SHALL use the accent tone.
+The `md-folder` / `md-folder_open` glyph and the name of a folder row SHALL be drawn in the accent tone. The `md-chat` glyph and the name of a prompt row SHALL be drawn in the default row colour, except a selected prompt row, whose glyph and name SHALL be drawn in the accent tone. The branch prefix of every row SHALL keep the default row colour, whatever the rest of the row uses. A row therefore carries its tone on its segments, not on the whole row: a row-level tone would paint the branch glyphs too. The missing-root row SHALL be drawn in the muted tone.
 
 #### Scenario: Folders are distinct from prompts
 - **WHEN** the dock shows a folder row and a prompt row
 - **THEN** the folder is drawn in the accent tone and the prompt in the default colour
+
+#### Scenario: The branch prefix is never toned
+- **WHEN** a folder row and a selected prompt row both carry a branch prefix
+- **THEN** both prefixes are drawn in the default row colour
 
 ### Requirement: Row menu order
 The right-click menu of a prompt row SHALL list the "Send to" entries first, then the `Open` entry, then the external-editor entries.

@@ -192,12 +192,23 @@ test("branchPrefixes: one guide cell per ancestor, with a pipe below depth 0", (
   rmSync(root, { recursive: true, force: true });
 });
 
-test("toDockRow: the branch prefix comes before the glyph and the name", () => {
+test("toDockRow: only the glyph and name take a tone, never the branch prefix", () => {
   const prompt = { rel: "a/b.md", name: "b", depth: 1, kind: "file", isLast: true } as const;
-  assert.equal(toDockRow(prompt, "│ └─ ", false, false, [], []).text, "│ └─ \u{F0B79} b");
+  // Not selected: no span has a tone, so the whole row takes the default colour.
+  const plain = toDockRow(prompt, "  └─ ", false, false, [], []);
+  assert.equal(plain.text, "  └─ \u{F0B79} b");
+  assert.deepEqual(plain.spans, [{ text: "  └─ " }, { text: "\u{F0B79} b" }]);
+  // Selected: the accent sits on the glyph and name, and the prefix keeps none.
+  const selected = toDockRow(prompt, "  └─ ", false, true, [], []);
+  assert.deepEqual(selected.spans, [{ text: "  └─ " }, { text: "\u{F0B79} b", tone: "accent" }]);
+  // A folder label is accent too, and a root row sends no prefix span at all.
   const folder = { rel: "a", name: "a", depth: 0, kind: "folder", isLast: false } as const;
-  assert.equal(toDockRow(folder, "", false, false, [], []).text, "\u{F024B} a");
-  assert.equal(toDockRow(folder, "", true, false, [], []).text, "\u{F0770} a");
+  assert.deepEqual(toDockRow(folder, "", false, false, [], []).spans, [
+    { text: "\u{F024B} a", tone: "accent" },
+  ]);
+  assert.deepEqual(toDockRow(folder, "", true, false, [], []).spans, [
+    { text: "\u{F0770} a", tone: "accent" },
+  ]);
 });
 
 test("readExpanded treats a missing or corrupt file as empty", () => {

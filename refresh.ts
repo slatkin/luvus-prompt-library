@@ -41,10 +41,20 @@ const FOLDER_OPEN_GLYPH = "\u{F0770}"; // md-folder_open
 /** One row as `ui dock push` accepts it (JSON on stdin). */
 interface DockRow {
   text: string;
-  tone?: string;
+  spans?: DockSpan[];
   action?: string;
   value?: string;
   menu?: DockMenuEntry[];
+}
+
+/**
+ * One drawn segment of a row. A span with no tone takes the row's tone, and a
+ * row with no tone takes the default row colour; `text` is drawn only when
+ * `spans` is empty.
+ */
+interface DockSpan {
+  text: string;
+  tone?: string;
 }
 
 /** One per-row right-click menu entry as `ui dock push` accepts it. */
@@ -125,6 +135,18 @@ export function branchPrefixes(rows: readonly TreeRow[]): string[] {
   });
 }
 
+/**
+ * The drawn segments of a row: the branch prefix, then the glyph and name. The
+ * prefix never carries a tone, so only the label takes the accent tone — a row
+ * `tone` would paint its branch glyphs and its text the same colour (spec: row
+ * colours). The row's `text` stays the plain label a click hands to the action.
+ */
+function rowSpans(prefix: string, label: string, labelTone?: string): DockSpan[] {
+  const labelSpan: DockSpan = labelTone ? { text: label, tone: labelTone } : { text: label };
+  // luvus drops a span with empty text, so a root row sends the label alone.
+  return prefix ? [{ text: prefix }, labelSpan] : [labelSpan];
+}
+
 function isFolder(p: string): boolean {
   try {
     return statSync(p).isDirectory();
@@ -141,7 +163,8 @@ function buildRows(
 ): DockRow[] {
   if (!isFolder(root)) {
     // Spec: missing root — one muted row that names the folder, no other rows.
-    return [{ text: `root not found: ${root}`, tone: "muted" }];
+    const label = `root not found: ${root}`;
+    return [{ text: label, spans: rowSpans("", label, "muted") }];
   }
   // Agents and editors don't change between rows: look them up once. Only the
   // focused workspace's agents are offered (design D11).
@@ -164,18 +187,25 @@ export function toDockRow(
   agents: readonly AgentInfo[],
 ): DockRow {
   if (row.kind === "folder") {
+    const glyph = isExpanded ? FOLDER_OPEN_GLYPH : FOLDER_GLYPH;
+    const label = `${glyph} ${row.name}`;
     return {
-      text: `${prefix}${isExpanded ? FOLDER_OPEN_GLYPH : FOLDER_GLYPH} ${row.name}`,
+      text: `${prefix}${label}`,
       // Folders take the accent tone, so they read differently from prompts.
-      tone: "accent",
+      spans: rowSpans(prefix, label, "accent"),
       action: "toggle",
       value: row.rel,
     };
   }
   // A left-click only selects (design D9): opening a file is a menu choice, so a
   // stray click cannot pull focus into a new editor pane.
+  const label = `${PROMPT_GLYPH} ${row.name}`;
   const dockRow: DockRow = {
-    text: `${prefix}${PROMPT_GLYPH} ${row.name}`,
+    text: `${prefix}${label}`,
+    // Mirrors the built-in docks' focused row as far as the dock API allows
+    // (design D10): accent text, the exact colour they use, and no marker glyph
+    // of its own — every prompt row already carries the prompt glyph.
+    spans: rowSpans(prefix, label, isSelected ? "accent" : undefined),
     action: "select",
     value: row.rel,
     // Send targets first: they are the common action, and the menu reads top-down.
@@ -185,12 +215,6 @@ export function toDockRow(
       ...editMenuEntries(row.rel, editors),
     ],
   };
-  if (isSelected) {
-    // Mirrors the built-in docks' focused row as far as the dock API allows
-    // (design D10): accent text, the exact colour they use, and no marker glyph
-    // of its own — every prompt row already carries the prompt glyph.
-    dockRow.tone = "accent";
-  }
   return dockRow;
 }
 
