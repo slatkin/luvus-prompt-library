@@ -24,10 +24,13 @@ import {
 
 const DOCK_ID = "prompts";
 const DOCK_TITLE = "PROMPTS";
-// One level of nesting. A row's glyph and the space after it take two columns, so
-// a three-space step puts a child row one space right of its parent's name; a
-// two-space step would put the child flush under that name.
-const INDENT = "   ";
+// The tree is drawn with box-drawing branches (design D12). Each row with a
+// parent starts with one guide cell per ancestor, then a connector; root rows
+// carry no prefix, so their glyph sits at the dock's left edge.
+const GUIDE_PIPE = "│ ";
+const GUIDE_BLANK = "  ";
+const BRANCH_MID = "├─ ";
+const BRANCH_LAST = "└─ ";
 // Row prefixes, written as escapes so the codepoints stay exact and reviewable.
 // These are Nerd Font glyphs (Material Design set), so the terminal needs a Nerd
 // Font — the same assumption luvus's own web client makes in its font stack.
@@ -97,6 +100,28 @@ export function sendMenuEntries(
   }));
 }
 
+/**
+ * The branch prefix for every row, in row order (spec: tree rows). A row draws
+ * one two-column guide cell per ancestor: a pipe while that ancestor still has a
+ * later sibling, blanks once it does not. A row with a parent then gets a
+ * connector: `├─` when a sibling follows it, `└─` when it is the last. Root rows
+ * get no prefix.
+ */
+export function branchPrefixes(rows: readonly TreeRow[]): string[] {
+  // `hasLater[d]` is the last row seen at depth `d`. It is the ancestor of every
+  // deeper row that follows it, since `scanTree` emits rows depth-first.
+  const hasLater: boolean[] = [];
+  return rows.map((row) => {
+    const guides = hasLater
+      .slice(0, row.depth)
+      .map((later) => (later ? GUIDE_PIPE : GUIDE_BLANK))
+      .join("");
+    hasLater[row.depth] = !row.isLast;
+    if (row.depth === 0) return "";
+    return guides + (row.isLast ? BRANCH_LAST : BRANCH_MID);
+  });
+}
+
 function isFolder(p: string): boolean {
   try {
     return statSync(p).isDirectory();
@@ -119,22 +144,25 @@ function buildRows(
   // focused workspace's agents are offered (design D11).
   const editors = availableEditors();
   const agents = agentsInWorkspace(listAgents(), currentWorkspaceId());
-  return scanTree(root, expanded).map((row) =>
-    toDockRow(row, expanded.has(row.rel), row.rel === selected, editors, agents),
+  const tree = scanTree(root, expanded);
+  const prefixes = branchPrefixes(tree);
+  return tree.map((row, i) =>
+    toDockRow(row, prefixes[i], expanded.has(row.rel), row.rel === selected, editors, agents),
   );
 }
 
-function toDockRow(
+/** One dock row: its branch prefix, then the glyph and name for its kind. */
+export function toDockRow(
   row: TreeRow,
+  prefix: string,
   isExpanded: boolean,
   isSelected: boolean,
   editors: readonly Editor[],
   agents: readonly AgentInfo[],
 ): DockRow {
-  const indent = INDENT.repeat(row.depth);
   if (row.kind === "folder") {
     return {
-      text: `${indent}${isExpanded ? FOLDER_OPEN_GLYPH : FOLDER_GLYPH} ${row.name}`,
+      text: `${prefix}${isExpanded ? FOLDER_OPEN_GLYPH : FOLDER_GLYPH} ${row.name}`,
       // Folders take the accent tone, so they read differently from prompts.
       tone: "accent",
       action: "toggle",
@@ -144,7 +172,7 @@ function toDockRow(
   // A left-click only selects (design D9): opening a file is a menu choice, so a
   // stray click cannot pull focus into a new editor pane.
   const dockRow: DockRow = {
-    text: `${indent}${PROMPT_GLYPH} ${row.name}`,
+    text: `${prefix}${PROMPT_GLYPH} ${row.name}`,
     action: "select",
     value: row.rel,
     // Send targets first: they are the common action, and the menu reads top-down.

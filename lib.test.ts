@@ -17,7 +17,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { resolveInlineEditor, splitExternalValue } from "./edit.ts";
-import { editMenuEntries, sendMenuEntries } from "./refresh.ts";
+import { editMenuEntries, sendMenuEntries, branchPrefixes, toDockRow } from "./refresh.ts";
 
 import {
   agentsInWorkspace,
@@ -136,6 +136,66 @@ test("scanTree: symlinks show as their targets, and a folder loop stops", posixO
     ],
   );
   rmSync(root, { recursive: true, force: true });
+});
+
+// ---- tree branches ----
+
+test("scanTree: isLast marks the last row of each sibling group", () => {
+  const root = tempLibrary();
+  const rows = scanTree(root, new Set(["review"]));
+  assert.deepEqual(
+    rows.map((r) => [r.rel, r.isLast]),
+    [
+      ["review", false], // plan.md follows it at the root
+      ["review/rust.md", false],
+      ["review/ts.md", true],
+      ["plan.md", true],
+    ],
+  );
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("branchPrefixes: a pipe follows each ancestor that still has a later sibling", () => {
+  const root = tempLibrary();
+  const rows = scanTree(root, new Set(["review"]));
+  const prefixes = branchPrefixes(rows);
+  assert.deepEqual(
+    rows.map((r, i) => [r.rel, prefixes[i]]),
+    [
+      ["review", ""], // root rows carry no prefix
+      ["review/rust.md", "│ ├─ "],
+      ["review/ts.md", "│ └─ "],
+      ["plan.md", ""],
+    ],
+  );
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("branchPrefixes: one two-column guide cell per ancestor level", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "prompt-dock-test-"));
+  mkdirSync(path.join(root, "a", "b"), { recursive: true });
+  writeFileSync(path.join(root, "a", "b", "deep.md"), "deep\n");
+  writeFileSync(path.join(root, "z.md"), "z\n");
+  const rows = scanTree(root, new Set(["a", "a/b"]));
+  const prefixes = branchPrefixes(rows);
+  assert.deepEqual(
+    rows.map((r, i) => [r.rel, prefixes[i]]),
+    [
+      ["a", ""],
+      ["a/b", "│ └─ "], // `a` is not last, so its column keeps the pipe
+      ["a/b/deep.md", "│   └─ "],
+      ["z.md", ""],
+    ],
+  );
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("toDockRow: the branch prefix comes before the glyph and the name", () => {
+  const prompt = { rel: "a/b.md", name: "b", depth: 1, kind: "file", isLast: true } as const;
+  assert.equal(toDockRow(prompt, "│ └─ ", false, false, [], []).text, "│ └─ \u{F0B79} b");
+  const folder = { rel: "a", name: "a", depth: 0, kind: "folder", isLast: false } as const;
+  assert.equal(toDockRow(folder, "", false, false, [], []).text, "\u{F024B} a");
+  assert.equal(toDockRow(folder, "", true, false, [], []).text, "\u{F0770} a");
 });
 
 test("readExpanded treats a missing or corrupt file as empty", () => {

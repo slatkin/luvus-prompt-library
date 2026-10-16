@@ -252,6 +252,11 @@ export interface TreeRow {
   /** 0 for root-level entries, 1 for their children, and so on. */
   depth: number;
   kind: "folder" | "file";
+  /**
+   * True when no later row shares this row's parent. A collapsed folder's
+   * children never show, so they do not count as rows after it (spec: tree rows).
+   */
+  isLast: boolean;
 }
 
 /**
@@ -291,19 +296,28 @@ export function scanTree(root: string, expanded: ReadonlySet<string>): TreeRow[]
     // Default sort: ascending by code unit (spec: tree rows).
     folders.sort();
     files.sort();
-    for (const name of folders) {
+    for (const [i, name] of folders.entries()) {
       const childRel = rel ? `${rel}/${name}` : name;
-      rows.push({ rel: childRel, name, depth, kind: "folder" });
+      // A folder is last only when no file follows it at this level: the
+      // children of a collapsed folder are not rows of their own.
+      rows.push({
+        rel: childRel,
+        name,
+        depth,
+        kind: "folder",
+        isLast: i === folders.length - 1 && files.length === 0,
+      });
       if (expanded.has(childRel)) {
         walk(path.join(dir, name), childRel, depth + 1, chain);
       }
     }
-    for (const name of files) {
+    for (const [i, name] of files.entries()) {
       rows.push({
         rel: rel ? `${rel}/${name}` : name,
         name: name.slice(0, -3),
         depth,
         kind: "file",
+        isLast: i === files.length - 1,
       });
     }
   };
