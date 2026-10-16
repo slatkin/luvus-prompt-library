@@ -22,7 +22,13 @@ func notImplemented(verb string) error {
 
 // runEditInline opens a prompt in a split pane (task 4.1). It replaces the
 // LUVUS_MODULE_ACTION_ID branch of edit.ts.
-func runEditInline() error { return notImplemented("edit-inline") }
+func runEditInline() error {
+	value := os.Getenv("LUVUS_MODULE_ROW_VALUE")
+	if value == "" {
+		return fmt.Errorf("edit-inline: no row value (LUVUS_MODULE_ROW_VALUE unset)")
+	}
+	return editInline(value)
+}
 
 // runEditExternal opens a prompt in a detached editor window (task 4.2). It
 // replaces the other LUVUS_MODULE_ACTION_ID branch of edit.ts.
