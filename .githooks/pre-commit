@@ -1,0 +1,9 @@
+#!/bin/sh
+# Quiet pre-commit gate: each gate's output is shown only when it fails.
+set -e
+for gate in format:check lint typecheck test; do
+  if ! output=$(npm run "$gate" 2>&1); then
+    printf '\npre-commit: npm run %s failed\n\n%s\n' "$gate" "$output"
+    exit 1
+  fi
+done
