@@ -2,8 +2,8 @@
 
 ## 1. Scaffold
 
-- [ ] 1.1 Add `luvus-module.toml` at the repo root (id, dock `prompts` on `sidebar.left`, `root` string setting with default `~/prompts`, actions `refresh`/`toggle`/`edit-inline`/`edit-external`/`send`, startup + events `workspace.created`/`workspace.closed`/`pane.created`/`pane.closed`/`pane.agent_status_changed`, all running `node <script>.ts`). Verify: `luvus module link .` succeeds and the PROMPTS dock appears in Settings → Layout.
-- [ ] 1.2 Add `lib.ts` with a `luvus()` runner (execFileSync on `LUVUS_BIN_PATH`, falling back to `luvus`, no shell), root resolution with `~` expansion, and a relpath guard that rejects paths outside root (design D3). Verify: `node --test` passes `lib.test.ts` cases for `~` expansion and for rejection of `../x.md`.
+- [x] 1.1 Add `luvus-module.toml` at the repo root (id, dock `prompts` on `sidebar.left`, `root` string setting with default `~/prompts`, actions `refresh`/`toggle`/`edit-inline`/`edit-external`/`send`, startup + events `workspace.created`/`workspace.closed`/`pane.created`/`pane.closed`/`pane.agent_status_changed`, all running `node <script>.ts`). Verify: `luvus module link .` succeeds and the PROMPTS dock appears in Settings → Layout.
+- [x] 1.2 Add `lib.ts` with a `luvus()` runner (execFileSync on `LUVUS_BIN_PATH`, falling back to `luvus`, no shell), root resolution with `~` expansion, and a relpath guard that rejects paths outside root (design D3). Verify: `node --test` passes `lib.test.ts` cases for `~` expansion and for rejection of `../x.md`.
 
 ## 2. Tree dock (spec: prompt-dock)
 
