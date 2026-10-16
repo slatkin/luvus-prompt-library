@@ -13,7 +13,7 @@ A luvus module that adds a sidebar dock for stored prompts:
 | Question | Decision |
 |---|---|
 | Language | **TypeScript** on Node (user accepts the Node dependency; no bash — Windows). Node ≥ 23.6 runs `.ts` directly via type stripping; this machine has v24.20.0. Zero npm dependencies (node stdlib only, erasable-only syntax: no `enum`/namespaces). |
-| Prompt library location | **Configurable module setting** (`root`), default `~/prompts`. |
+| Prompt library location | **Configurable module setting** (`root`), default `~/.prompts`. |
 | Send UX | **Menu lists each live pane** — one entry per pane, built at refresh time from `luvus pane list --all-tabs`. |
 | Editors | **Honour luvus's "Open files with" setting** (`layout.file_open` in `~/.luvus/config.json`) for inline editing, with a **fallback to `nvim`** when unset/read-only. Plus detached launches for external GUI editors (zed, VS Code). |
 
@@ -44,7 +44,7 @@ command = ["node", "refresh.ts"]
 [[actions]]  # refresh (contexts: workspace), toggle (folder click),
              # edit-inline, edit-external (editor in value), send (pane id in value)
 [[settings]]
-key = "root"          # type string, default "~/prompts"
+key = "root"          # type string, default "~/.prompts"
 ```
 
 ### Dock rows
