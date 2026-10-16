@@ -28,6 +28,17 @@ The dock SHALL show one row per folder and one row per `.md` file under the root
 - **WHEN** the root has `notes.txt` and `.git/`
 - **THEN** neither shows in the dock
 
+### Requirement: Row glyphs
+Each folder row SHALL start with a Nerd Font glyph: `md-folder` when the folder is collapsed, `md-folder_open` when it is expanded. Each prompt row SHALL start with the `md-chat` glyph. The terminal SHALL have a Nerd Font, or these glyphs show as boxes.
+
+#### Scenario: Collapsed and expanded folders
+- **WHEN** `review` is collapsed and `claude` is expanded
+- **THEN** `review` shows `md-folder` and `claude` shows `md-folder_open`
+
+#### Scenario: Prompt glyph
+- **WHEN** the dock shows the prompt `plan`
+- **THEN** `plan` shows the `md-chat` glyph
+
 ### Requirement: Expand and collapse folders
 Clicking a folder row SHALL toggle it between expanded and collapsed. The children of a collapsed folder SHALL NOT show. The expanded set SHALL persist across luvus restarts. Folders SHALL be collapsed by default.
 
@@ -62,18 +73,18 @@ The right-click menu of a prompt row SHALL have an "Edit in zed" entry only when
 - **THEN** zed opens the file and the module action finishes at once
 
 ### Requirement: Select a prompt
-A left-click on a prompt row SHALL select that prompt and SHALL NOT open it. The selected row SHALL be drawn in the accent tone with a status dot before its name. Luvus gives a module dock row no bold and no row background, so the accent tone and the dot are the closest available match to the focused row of the built-in docks. The selection SHALL persist across luvus restarts. A prompt that is no longer in the library SHALL NOT draw as selected.
+A left-click on a prompt row SHALL select that prompt and SHALL NOT open it. The selected row SHALL be drawn in the accent tone and SHALL NOT add a marker glyph of its own. Luvus gives a module dock row no bold and no row background, so the accent tone is the closest available match to the focused row of the built-in docks. The selection SHALL persist across luvus restarts. A prompt that is no longer in the library SHALL NOT draw as selected.
 
 #### Scenario: Left-click selects
 - **WHEN** the user left-clicks the prompt row `plan`
-- **THEN** `plan` is drawn in the accent tone with a dot, no pane is created, and no editor starts
+- **THEN** `plan` is drawn in the accent tone, no pane is created, and no editor starts
 
 #### Scenario: Selection survives restart
 - **WHEN** `plan` is selected and luvus restarts
 - **THEN** the dock repaints with `plan` still drawn as selected
 
 ### Requirement: Row colours
-Folder rows SHALL use the accent tone. Prompt rows SHALL use the default row colour, except a selected prompt row, which SHALL use the accent tone with a status dot.
+Folder rows SHALL use the accent tone. Prompt rows SHALL use the default row colour, except a selected prompt row, which SHALL use the accent tone.
 
 #### Scenario: Folders are distinct from prompts
 - **WHEN** the dock shows a folder row and a prompt row

@@ -30,11 +30,12 @@
 
 ## 6. Interaction rework (spec: prompt-dock, agent-prompt-send)
 
-- [x] 6.1 Left-click selects instead of opening (supersedes the 3.1/3.2 entry point): prompt rows carry `action: "select"`, `select.ts` keeps the selection in `LUVUS_MODULE_STATE_DIR/selected.json`, and the selected row is drawn in the accent tone with a `done` dot — the closest a module dock row gets to the built-in docks' focused row, which also uses bold and a row background (design D10). Verify: a left-click on a prompt creates no pane, shows the accent row with its dot, and survives a restart.
+- [x] 6.1 Left-click selects instead of opening (supersedes the 3.1/3.2 entry point): prompt rows carry `action: "select"`, `select.ts` keeps the selection in `LUVUS_MODULE_STATE_DIR/selected.json`, and the selected row is drawn in the accent tone — the closest a module dock row gets to the built-in docks' focused row, which also uses bold and a row background (design D10). Verify: a left-click on a prompt creates no pane, shows the accent row, and survives a restart.
 - [x] 6.2 Put opening in the row menu, in this order: "Send to" entries, `Open` (inline editor pane), `Edit in zed` / `Edit in VS Code`. Verify: the menu lists the send targets first, and `Open` starts the configured editor in a new pane.
 - [x] 6.3 Row colours and header: folders take `tone: "accent"`, prompts keep the default, and every push carries `--title PROMPTS`. Verify: the header reads `PROMPTS` in upper case.
 - [x] 6.4 Shorten the "Send to" labels to name, kind and pane (design D8), and drop the now-unused `status`/`workspace_name` from the parsed agent. Verify: a menu entry reads `bruv-orch (pi) · pane 12`.
 - [x] 6.5 Limit the "Send to" entries to the focused workspace (design D11): keep the agents whose `workspace` id equals `LUVUS_WORKSPACE_ID`. Verify: with agents in two workspaces the menu lists only the focused one's, the id was confirmed live with a throwaway probe module, and `lib.test.ts` covers the filter and the unknown-id fallback.
+- [x] 6.6 Nerd Font row glyphs (design D10): `md-folder` / `md-folder_open` for folders and `md-chat` for prompts, replacing the `▸` / `▾` arrows. The selection dot is dropped with them, so the selected prompt is accent-coloured only. Verify: a collapsed folder pushes `md-folder` and an expanded one `md-folder_open`, prompts push `md-chat`, and the pushed rows carry no `dot` key. This adds a Nerd Font requirement to the terminal.
 
 ## Workflow follow-up
 

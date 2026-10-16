@@ -24,25 +24,21 @@ import {
 
 const DOCK_ID = "prompts";
 const DOCK_TITLE = "PROMPTS";
-// One level of nesting. A folder row spends two of these columns on its `▸ `
-// glyph, so a three-space step puts every child one space right of its parent's
-// name; a two-space step puts the child flush under that name instead.
+// One level of nesting. A row's glyph and the space after it take two columns, so
+// a three-space step puts a child row one space right of its parent's name; a
+// two-space step would put the child flush under that name.
 const INDENT = "   ";
-// `ui dock push` draws a row's dot as "<dot> " before its text, so a dotted row
-// starts two columns further right. A selected row drops those columns from its
-// indent instead, and its name keeps the column its siblings use.
-const DOT_PREFIX_WIDTH = 2;
-// The dot on the selected row. A module dock row can set a status dot and a tone,
-// but not bold or a row background, so the accent tone plus a filled dot is the
-// closest a module gets to the focused row of the built-in docks.
-const SELECTED_DOT = "done";
+// Row prefixes, written as escapes so the codepoints stay exact and reviewable.
+// These are Nerd Font glyphs (Material Design set), so the terminal needs a Nerd
+// Font — the same assumption luvus's own web client makes in its font stack.
+const PROMPT_GLYPH = "\u{F0B79}"; // md-chat
+const FOLDER_GLYPH = "\u{F024B}"; // md-folder
+const FOLDER_OPEN_GLYPH = "\u{F0770}"; // md-folder_open
 
 /** One row as `ui dock push` accepts it (JSON on stdin). */
 interface DockRow {
   text: string;
   tone?: string;
-  /** A status dot: `idle` / `working` / `blocked` / `done`. */
-  dot?: string;
   action?: string;
   value?: string;
   menu?: DockMenuEntry[];
@@ -135,21 +131,20 @@ function toDockRow(
   editors: readonly Editor[],
   agents: readonly AgentInfo[],
 ): DockRow {
-  const baseIndent = INDENT.repeat(row.depth);
+  const indent = INDENT.repeat(row.depth);
   if (row.kind === "folder") {
     return {
-      text: `${baseIndent}${isExpanded ? "▾" : "▸"} ${row.name}`,
+      text: `${indent}${isExpanded ? FOLDER_OPEN_GLYPH : FOLDER_GLYPH} ${row.name}`,
       // Folders take the accent tone, so they read differently from prompts.
       tone: "accent",
       action: "toggle",
       value: row.rel,
     };
   }
-  const indent = isSelected ? baseIndent.slice(DOT_PREFIX_WIDTH) : baseIndent;
   // A left-click only selects (design D9): opening a file is a menu choice, so a
   // stray click cannot pull focus into a new editor pane.
   const dockRow: DockRow = {
-    text: `${indent}${row.name}`,
+    text: `${indent}${PROMPT_GLYPH} ${row.name}`,
     action: "select",
     value: row.rel,
     // Send targets first: they are the common action, and the menu reads top-down.
@@ -161,9 +156,9 @@ function toDockRow(
   };
   if (isSelected) {
     // Mirrors the built-in docks' focused row as far as the dock API allows
-    // (design D10): accent text, which is the exact colour they use, plus a dot.
+    // (design D10): accent text, the exact colour they use, and no marker glyph
+    // of its own — every prompt row already carries the prompt glyph.
     dockRow.tone = "accent";
-    dockRow.dot = SELECTED_DOT;
   }
   return dockRow;
 }

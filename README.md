@@ -16,6 +16,10 @@ The **PROMPTS** dock (sidebar, left) shows the markdown files under your
 prompt library root as a folder tree:
 
 - Folders expand and collapse on click; the expanded set survives restarts.
+- Every row starts with a Nerd Font glyph: a folder shows `md-folder`, or
+  `md-folder_open` when it is expanded, and a prompt shows `md-chat`. A
+  terminal without a Nerd Font shows boxes instead.
+- Clicking a prompt selects it (accent colour); it does not open an editor.
 - Only `.md` files show (any letter case); hidden entries (names starting with
   `.`) are skipped. Symlinks show as their targets.
 - If the root folder does not exist, the dock shows a single muted row that
@@ -54,6 +58,9 @@ force one.
   (The dev tooling for lint/format/CI gates uses devDependencies only.)
 - **luvus >= 0.14.3** — needs `luvus agent list` with terminal ids and
   `luvus agent prompt --terminal-id`.
+- **A Nerd Font in your terminal** — the dock prefixes each row with a Material
+  Design glyph (`md-folder`, `md-folder_open`, `md-chat`). Luvus itself needs
+  none, and its own UI avoids font-dependent glyphs, but these row prefixes do.
 - Your agent must be running inside luvus so it appears in
   `luvus agent list`.
 
