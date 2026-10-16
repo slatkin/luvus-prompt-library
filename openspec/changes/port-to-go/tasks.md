@@ -25,7 +25,7 @@
 
 ## 6. Manifest switch (design D12)
 
-- [ ] 6.1 Rewrite `luvus-module.toml`: every `command` becomes `["prompt-dock", "<verb>"]`, add `[[build]]` with `command = ["go", "install", "./cmd/prompt-dock"]`, and set `version = "0.2.0"`. Remove the comment about `edit.ts` reading `LUVUS_MODULE_ACTION_ID`. Verify: run `go install ./cmd/prompt-dock`, relink the module, restart luvus, and check by hand that the dock paints, a folder toggles, a prompt selects, **Open** and **Edit in zed** open the file, and **Send to** submits a prompt to a live agent. `luvus module log` shows only `prompt-dock` runs with zero exits.
+- [x] 6.1 Rewrite `luvus-module.toml`: every `command` becomes `["prompt-dock", "<verb>"]`, add `[[build]]` with `command = ["go", "install", "./cmd/prompt-dock"]`, and set `version = "0.2.0"`. Remove the comment about `edit.ts` reading `LUVUS_MODULE_ACTION_ID`. Verify: run `go install ./cmd/prompt-dock`, relink the module, restart luvus, and check by hand that the dock paints, a folder toggles, a prompt selects, **Open** and **Edit in zed** open the file, and **Send to** submits a prompt to a live agent. `luvus module log` shows only `prompt-dock` runs with zero exits.
 - [x] 6.2 Update `README.md`: the requirements (Go 1.22 or newer, `GOBIN` on the `PATH` that luvus sees, no Node, luvus 0.14.3, Nerd Font), the install steps for a linked checkout (`go install ./cmd/prompt-dock`, then `command -v prompt-dock`), "run `go install` again after each pull", the hook setup with `git config core.hooksPath .githooks`, and a note that Windows is untested. Verify: on a clean checkout, following the README on Linux gives a working dock.
 
 ## 7. Remove the TS code and npm tooling (design D17)
