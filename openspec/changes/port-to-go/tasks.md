@@ -2,7 +2,7 @@
 
 ## 1. Scaffold (design D12, D13)
 
-- [ ] 1.1 Add `go.mod` (`module github.com/slatkin/luvus-prompt-library`, `go 1.22`, no `toolchain` line) and `cmd/prompt-dock/main.go` with the verb dispatch. Each verb that is not ported yet returns a "not implemented" error. Verify: `go vet ./...` succeeds, `go install ./cmd/prompt-dock` puts `prompt-dock` on `PATH` (`command -v prompt-dock`), and `prompt-dock nope` exits 1 with a usage line.
+- [x] 1.1 Add `go.mod` (`module github.com/slatkin/luvus-prompt-library`, `go 1.22`, no `toolchain` line) and `cmd/prompt-dock/main.go` with the verb dispatch. Each verb that is not ported yet returns a "not implemented" error. Verify: `go vet ./...` succeeds, `go install ./cmd/prompt-dock` puts `prompt-dock` on `PATH` (`command -v prompt-dock`), and `prompt-dock nope` exits 1 with a usage line.
 
 ## 2. Shared library (design D14)
 
