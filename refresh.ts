@@ -13,6 +13,7 @@ import {
   settingRoot,
   type TreeRow,
 } from "./lib.ts";
+import { findOnPath } from "./edit.ts";
 
 const DOCK_ID = "prompts";
 const INDENT = "  ";
@@ -23,6 +24,29 @@ export interface DockRow {
   tone?: string;
   action?: string;
   value?: string;
+  menu?: DockMenuEntry[];
+}
+
+/** One per-row right-click menu entry as `ui dock push` accepts it. */
+export interface DockMenuEntry {
+  title: string;
+  action: string;
+  value: string;
+}
+
+/**
+ * External editor entries for a prompt row, shown only when the binary is
+ * actually on PATH (design D7, spec: external editors).
+ */
+export function editorMenuEntries(rel: string): DockMenuEntry[] {
+  const entries: DockMenuEntry[] = [];
+  if (findOnPath("zed")) {
+    entries.push({ title: "Open in zed", action: "edit-external", value: `zed|${rel}` });
+  }
+  if (findOnPath("code")) {
+    entries.push({ title: "Open in VS Code", action: "edit-external", value: `code|${rel}` });
+  }
+  return entries;
 }
 
 /** Build the dock rows for `root`: the tree, or the missing-root row. */
@@ -49,6 +73,7 @@ function toDockRow(row: TreeRow, isExpanded: boolean): DockRow {
     text: `${indent}${row.name}`,
     action: "edit-inline",
     value: row.rel,
+    menu: editorMenuEntries(row.rel),
   };
 }
 

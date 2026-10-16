@@ -6,6 +6,9 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
+import { findOnPath, resolveInlineEditor, splitExternalValue } from "./edit.ts";
+import { editorMenuEntries } from "./refresh.ts";
+
 import {
   expandHome,
   readExpanded,
@@ -118,4 +121,45 @@ test("writeExpanded then readExpanded round-trips the folder set", () => {
   writeFileSync(path.join(dir, "expanded.json"), "null");
   assert.deepEqual(readExpanded(dir), new Set());
   rmSync(dir, { recursive: true, force: true });
+});
+
+
+// ---- editing helpers (tasks 3.1 / 3.2) ----
+test("resolveInlineEditor keeps the configured editor", () => {
+  assert.equal(resolveInlineEditor("hx"), "hx");
+  assert.equal(resolveInlineEditor("emacs -nw"), "emacs -nw");
+});
+
+test("resolveInlineEditor falls back to nvim when empty, readonly, or missing", () => {
+  assert.equal(resolveInlineEditor(null), "nvim");
+  assert.equal(resolveInlineEditor(""), "nvim");
+  assert.equal(resolveInlineEditor("  "), "nvim");
+  assert.equal(resolveInlineEditor("readonly"), "nvim");
+});
+
+test("findOnPath finds a binary that exists on PATH (sh)", () => {
+  assert.equal(findOnPath("sh"), true);
+});
+
+test("findOnPath returns false for a missing binary", () => {
+  assert.equal(findOnPath("definitely-not-a-real-binary-xyz"), false);
+});
+
+test("editorMenuEntries use the editor|relpath encoding", () => {
+  const entries = editorMenuEntries("review/plan.md");
+  const zed = entries.find((e) => e.title === "Open in zed");
+  assert.ok(zed, "zed entry present when zed is on PATH");
+  assert.equal(zed.action, "edit-external");
+  assert.equal(zed.value, "zed|review/plan.md");
+  const code = entries.find((e) => e.title === "Open in VS Code");
+  if (code) {
+    assert.equal(code.action, "edit-external");
+    assert.equal(code.value, "code|review/plan.md");
+  }
+});
+
+test("splitExternalValue splits on the first | only, so | in a filename works", () => {
+  const [editor, rel] = splitExternalValue("code|weird|name.md");
+  assert.equal(editor, "code");
+  assert.equal(rel, "weird|name.md");
 });
