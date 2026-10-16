@@ -2,7 +2,7 @@
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import path from "node:path";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync, type Dirent } from "node:fs";
 
 export interface LuvusResult {
   status: number;
@@ -221,7 +221,7 @@ const byName = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 export function scanTree(root: string, expanded: ReadonlySet<string>): TreeRow[] {
   const rows: TreeRow[] = [];
   const walk = (dir: string, rel: string, depth: number): void => {
-    let entries: ReturnType<typeof readdirSync>;
+    let entries: Dirent[];
     try {
       entries = readdirSync(dir, { withFileTypes: true });
     } catch {
