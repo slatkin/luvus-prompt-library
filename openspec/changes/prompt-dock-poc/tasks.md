@@ -2,13 +2,13 @@
 
 ## 1. Scaffold
 
-- [x] 1.1 Add `luvus-module.toml` at the repo root (id, dock `prompts` on `sidebar.left`, `root` string setting with default `~/prompts`, actions `refresh`/`toggle`/`edit-inline`/`edit-external`/`send`, startup + events `workspace.created`/`workspace.closed`/`pane.created`/`pane.closed`/`pane.agent_status_changed`, all running `node <script>.ts`). Verify: `luvus module link .` succeeds and the PROMPTS dock appears in Settings → Layout.
+- [x] 1.1 Add `luvus-module.toml` at the repo root (id, dock `prompts` on `sidebar.left`, `root` string setting with default `~/.prompts`, actions `refresh`/`toggle`/`edit-inline`/`edit-external`/`send`, startup + events `workspace.created`/`workspace.closed`/`pane.created`/`pane.closed`/`pane.agent_status_changed`, all running `node <script>.ts`). Verify: `luvus module link .` succeeds and the PROMPTS dock appears in Settings → Layout.
 - [x] 1.2 Add `lib.ts` with a `luvus()` runner (execFileSync on `LUVUS_BIN_PATH`, falling back to `luvus`, no shell), root resolution with `~` expansion, and a relpath guard that rejects paths outside root (design D3). Verify: `node --test` passes `lib.test.ts` cases for `~` expansion and for rejection of `../x.md`.
 
 ## 2. Tree dock (spec: prompt-dock)
 
 - [x] 2.1 Implement the tree scan in `lib.ts`: depth-first, folders before files, sorted by name, `.md` only, hidden entries skipped, collapsed folders' children left out. Verify: `lib.test.ts` builds a temp tree that matches the "Nested library" and "Ignored files" scenarios and checks the row order and indentation.
-- [x] 2.2 Implement `refresh.ts` to build rows (folder `▸/▾`, prompt names without `.md`, the missing-root muted row) and push them with `ui dock push` through stdin. Verify: run `luvus module run <id> refresh` with a sample `~/prompts`. The dock shows the tree, and a non-existent root shows the single muted row.
+- [x] 2.2 Implement `refresh.ts` to build rows (folder `▸/▾`, prompt names without `.md`, the missing-root muted row) and push them with `ui dock push` through stdin. Verify: run `luvus module run <id> refresh` with a sample `~/.prompts`. The dock shows the tree, and a non-existent root shows the single muted row.
 - [x] 2.3 Implement `toggle.ts` to keep the expanded set in `LUVUS_MODULE_STATE_DIR/expanded.json` (treat a corrupt or missing file as empty) and then run refresh. Verify: clicking a folder expands and collapses it, and the state survives a luvus restart.
 
 ## 3. Editing (spec: prompt-dock)
@@ -25,7 +25,7 @@
 
 ## 5. Docs and integration
 
-- [ ] 5.1 Update `README.md` with link/install steps, the `root` setting, Node ≥ 23.6 and luvus ≥ 0.14.3 requirements, and a screenshot of the dock with an open send menu. Verify: following the README on a clean `~/prompts` gives a working dock.
+- [ ] 5.1 Update `README.md` with link/install steps, the `root` setting, Node ≥ 23.6 and luvus ≥ 0.14.3 requirements, and a screenshot of the dock with an open send menu. Verify: following the README on a clean `~/.prompts` gives a working dock.
 - [ ] 5.2 Run the end-to-end check: restart luvus, the dock repaints from startup, edit a prompt inline, send it to an agent, and confirm that the agent receives the edited text. Verify: all steps pass with no errors in `luvus module log`.
 
 ## Workflow follow-up

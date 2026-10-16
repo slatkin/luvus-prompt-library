@@ -7,11 +7,11 @@ Shows a folder tree of markdown prompt files in a luvus sidebar dock and lets th
 ## ADDED Requirements
 
 ### Requirement: Configurable library root
-The module SHALL read the prompt library from the folder in the module setting `root`. The default is `~/prompts`. A leading `~` SHALL expand to the user's home folder.
+The module SHALL read the prompt library from the folder in the module setting `root`. The default is `~/.prompts`. A leading `~` SHALL expand to the user's home folder.
 
 #### Scenario: Default root
 - **WHEN** the user has not set `root`
-- **THEN** the dock shows the contents of `~/prompts`
+- **THEN** the dock shows the contents of `~/.prompts`
 
 #### Scenario: Missing root
 - **WHEN** the `root` folder does not exist
