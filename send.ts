@@ -75,7 +75,10 @@ function send(value: string): void {
 
   // The text is ONE argv element (`execFileSync`, no shell, design D4), so
   // its newlines survive; `agent prompt` submits it in one atomic request.
-  const res = luvus(["agent", "prompt", pane, text, "--terminal-id", terminalId]);
+  // `--` ends option parsing: a prompt that starts with `-` (YAML frontmatter
+  // `---`, a leading bullet) is otherwise rejected as an unknown option. The
+  // text must stay last, because everything after `--` is positional.
+  const res = luvus(["agent", "prompt", pane, "--terminal-id", terminalId, "--", text]);
   if (res.status !== 0) {
     // `agent_not_ready` (permission prompt up), a stale target, or any other
     // refusal: nothing was queued — say so, with the agent label.

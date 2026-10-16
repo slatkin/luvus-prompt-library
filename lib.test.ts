@@ -397,3 +397,17 @@ test("send's read-failure toast names the agent", posixOnly, () => {
   assert.ok(calls.includes('Send to pane 9 failed: couldn\'t read "missing".'), calls);
   rmSync(root, { recursive: true, force: true });
 });
+
+// Regression: a prompt starting with `-` (YAML frontmatter `---`, a leading
+// bullet) was parsed by `luvus agent prompt` as an option and never submitted.
+test("send passes the prompt after -- so dash-leading text is not an option", posixOnly, () => {
+  const root = tempLibrary();
+  writeFileSync(path.join(root, "shot.md"), "---\nallowed-tools: Read\n---\n\nbody line\n");
+  const { status, calls } = runSend(`9|${"d".repeat(32)}|shot.md`, root);
+  assert.equal(status, 0, calls);
+  assert.match(calls, /agent prompt 9 --terminal-id d{32} -- ---/);
+  // The whole text still arrives as one element, after the separator.
+  assert.ok(calls.includes("body line"), calls);
+  assert.ok(calls.includes('Sent "shot" to pane 9.'), calls);
+  rmSync(root, { recursive: true, force: true });
+});
