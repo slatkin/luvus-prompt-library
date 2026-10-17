@@ -20,7 +20,7 @@ Start only after `prompt-module` is implemented: these tasks use `loadPrompt`,
 
 ## 4. Docs
 
-- [ ] 4.1 Update the README: Requirements (bubbletea, Go 1.26 or later, no "standard library only"), a new section for the input panel (hint opens a split, Enter sends, Esc cancels, focus returns), and the "Sending" paragraph, which after `prompt-module` says that no value can be given yet. Verify that each documented behavior matches the specs in this change and in `prompt-module`.
+- [x] 4.1 Update the README: Requirements (bubbletea, Go 1.26 or later, no "standard library only"), a new section for the input panel (hint opens a split, Enter sends, Esc cancels, focus returns), and the "Sending" paragraph, which after `prompt-module` says that no value can be given yet. Verify that each documented behavior matches the specs in this change and in `prompt-module`.
 
 ## 5. Integration check
 
