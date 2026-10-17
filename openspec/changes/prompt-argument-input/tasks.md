@@ -5,7 +5,7 @@ Start only after `prompt-module` is implemented: these tasks use `loadPrompt`,
 
 ## 1. Dependencies
 
-- [ ] 1.1 Run `go get charm.land/bubbletea/v2 charm.land/bubbles/v2` and `go mod tidy`, so the `go` directive in `go.mod` moves to the version that bubbles/v2 needs (design D6). Verify that `go build ./...` and `go vet ./...` pass.
+- [x] 1.1 Run `go get charm.land/bubbletea/v2 charm.land/bubbles/v2` and `go mod tidy`, so the `go` directive in `go.mod` moves to the version that bubbles/v2 needs (design D6). Verify that `go build ./...` and `go vet ./...` pass.
 
 ## 2. Send path
 
@@ -14,9 +14,9 @@ Start only after `prompt-module` is implemented: these tasks use `loadPrompt`,
 
 ## 3. Input panel
 
-- [ ] 3.1 Add `ask.go` with the bubbletea model (design D6): a focused `textinput` with the hint as the placeholder text, a view with the prompt name and the target label, Enter submits, Esc and Ctrl+C cancel. Verify that `go build ./...` passes; task 3.2 tests the behavior (design D8).
-- [ ] 3.2 Add the `ask` verb: read and delete `ask.json` (missing or bad JSON exits 0 with no luvus call), run the program, call `deliver` with the value on submit, then `pane focus <return_pane>` when it is set, on submit and on cancel (design D2, D7). Register `ask` in `main.go` (verbs map and usage). Verify with the one panel test (design D8), which runs the program on scripted input (`tea.WithInput`, `tea.WithOutput(io.Discard)`); use the `Update` fallback only if scripted input does not work: `my-change` + Enter logs `agent prompt` with the value filled in and then `pane focus 3`; Esc logs only `pane focus 3`; a missing handoff logs nothing; `ask.json` is gone after each run.
-- [ ] 3.3 Add the `[[panes]]` entry `ask` to `luvus-module.toml` (design D1) and set `version = "0.4.0"`. Verify that the entry matches design D1 (id, placement, command); task 5.1 checks it live in luvus.
+- [x] 3.1 Add `ask.go` with the bubbletea model (design D6): a focused `textinput` with the hint as the placeholder text, a view with the prompt name and the target label, Enter submits, Esc and Ctrl+C cancel. Verify that `go build ./...` passes; task 3.2 tests the behavior (design D8).
+- [x] 3.2 Add the `ask` verb: read and delete `ask.json` (missing or bad JSON exits 0 with no luvus call), run the program, call `deliver` with the value on submit, then `pane focus <return_pane>` when it is set, on submit and on cancel (design D2, D7). Register `ask` in `main.go` (verbs map and usage). Verify with the one panel test (design D8), which runs the program on scripted input (`tea.WithInput`, `tea.WithOutput(io.Discard)`); use the `Update` fallback only if scripted input does not work: `my-change` + Enter logs `agent prompt` with the value filled in and then `pane focus 3`; Esc logs only `pane focus 3`; a missing handoff logs nothing; `ask.json` is gone after each run.
+- [x] 3.3 Add the `[[panes]]` entry `ask` to `luvus-module.toml` (design D1) and set `version = "0.4.0"`. Verify that the entry matches design D1 (id, placement, command); task 5.1 checks it live in luvus.
 
 ## 4. Docs
 
