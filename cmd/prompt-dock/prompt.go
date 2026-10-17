@@ -6,6 +6,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -27,11 +28,11 @@ var placeholder = regexp.MustCompile(`\$\{ARGUMENTS:-[^}]*\}|\$ARGUMENTS`)
 
 // loadPrompt reads the prompt file at abs, removes the BOM, splits the
 // frontmatter (design D2), and refuses a body that is only whitespace. A
-// read failure returns the os.ReadFile error unchanged.
+// read failure returns the wrapped os.ReadFile error.
 func loadPrompt(abs string) (Prompt, error) {
 	raw, err := os.ReadFile(abs)
 	if err != nil {
-		return Prompt{}, err
+		return Prompt{}, fmt.Errorf("read prompt file: %w", err)
 	}
 	p := parsePrompt(strings.TrimPrefix(string(raw), "\ufeff"))
 	if strings.TrimSpace(p.Body) == "" {
