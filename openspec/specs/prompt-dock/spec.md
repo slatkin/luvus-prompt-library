@@ -18,11 +18,19 @@ The module SHALL read the prompt library from the folder in the module setting `
 - **THEN** the dock shows one muted row that names the missing folder, and no other rows
 
 ### Requirement: Tree rows
-The dock SHALL show one row per folder and one row per `.md` file under the root, in depth-first order. A child row SHALL start one space to the right of its parent's name, at every level of the tree. Folders SHALL come before files at each level, and each group SHALL be sorted by name. Prompt rows SHALL show the file name without `.md`. Hidden entries (names that start with `.`) and non-`.md` files SHALL NOT show.
+The dock SHALL show one row per folder and one row per `.md` file under the root, in depth-first order. A row with a parent SHALL start with a box-drawing branch prefix: one two-column guide cell per ancestor, then a connector, `├─ ` when a sibling follows the row and `└─ ` when it is the last of its level. A guide cell SHALL be `│ ` only when its ancestor has a later sibling at its own level AND that ancestor is not a root-level row: the pipe joins the ancestor's connector to its next sibling, and a root-level row has no connector. Every other guide cell SHALL be blank. A root-level row SHALL have no prefix. Folders SHALL come before files at each level, and each group SHALL be sorted by name. Prompt rows SHALL show the file name without `.md`. Hidden entries (names that start with `.`) and non-`.md` files SHALL NOT show.
 
 #### Scenario: Nested library
 - **WHEN** the root has `review/rust.md`, `review/ts.md` and `plan.md`, and `review` is expanded
-- **THEN** the dock shows `review` (folder), then `rust` and `ts` indented one level, then `plan`
+- **THEN** the dock shows `review` (folder), then `rust` and `ts` on a `  ├─ ` and `  └─ ` branch, then `plan`
+
+#### Scenario: No phantom line under a root-level folder
+- **WHEN** the root holds `claude` and `pi`, both expanded with prompts inside
+- **THEN** every child row is prefixed `  ├─ ` or `  └─ `, and no row carries a `│` in its guide cells
+
+#### Scenario: Pipe below a nested folder that has a sibling
+- **WHEN** the expanded folder `nested` sits above other prompts inside `pi`, and `nested` holds a prompt
+- **THEN** `nested` is prefixed `  ├─ ` and its child is prefixed `  │ └─ `
 
 #### Scenario: Ignored files
 - **WHEN** the root has `notes.txt` and `.git/`
@@ -73,22 +81,30 @@ The right-click menu of a prompt row SHALL have an "Edit in zed" entry only when
 - **THEN** zed opens the file and the module action finishes at once
 
 ### Requirement: Select a prompt
-A left-click on a prompt row SHALL select that prompt and SHALL NOT open it. The selected row SHALL be drawn in the accent tone and SHALL NOT add a marker glyph of its own. Luvus gives a module dock row no bold and no row background, so the accent tone is the closest available match to the focused row of the built-in docks. The selection SHALL persist across luvus restarts. A prompt that is no longer in the library SHALL NOT draw as selected.
+A left-click on a prompt row SHALL select that prompt and SHALL NOT open it. The glyph and name of the selected row SHALL be drawn in the accent tone, and the row SHALL NOT add a marker glyph of its own. The branch prefix SHALL keep the default row colour. Luvus gives a module dock row no bold and no row background, so the accent tone is the closest available match to the focused row of the built-in docks. The selection SHALL persist across luvus restarts. A prompt that is no longer in the library SHALL NOT draw as selected.
 
 #### Scenario: Left-click selects
 - **WHEN** the user left-clicks the prompt row `plan`
 - **THEN** `plan` is drawn in the accent tone, no pane is created, and no editor starts
+
+#### Scenario: Selecting a child row does not recolour the tree
+- **WHEN** the user left-clicks a prompt row that carries a `  └─ ` prefix
+- **THEN** the `md-chat` glyph and the file name are accent-toned and the `  └─ ` prefix keeps the default row colour
 
 #### Scenario: Selection survives restart
 - **WHEN** `plan` is selected and luvus restarts
 - **THEN** the dock repaints with `plan` still drawn as selected
 
 ### Requirement: Row colours
-Folder rows SHALL use the accent tone. Prompt rows SHALL use the default row colour, except a selected prompt row, which SHALL use the accent tone.
+The `md-folder` / `md-folder_open` glyph and the name of a folder row SHALL be drawn in the accent tone. The `md-chat` glyph and the name of a prompt row SHALL be drawn in the default row colour, except a selected prompt row, whose glyph and name SHALL be drawn in the accent tone. The branch prefix of every row SHALL keep the default row colour, whatever the rest of the row uses. A row therefore carries its tone on its segments, not on the whole row: a row-level tone would paint the branch glyphs too. The missing-root row SHALL be drawn in the muted tone.
 
 #### Scenario: Folders are distinct from prompts
 - **WHEN** the dock shows a folder row and a prompt row
 - **THEN** the folder is drawn in the accent tone and the prompt in the default colour
+
+#### Scenario: The branch prefix is never toned
+- **WHEN** a folder row and a selected prompt row both carry a branch prefix
+- **THEN** both prefixes are drawn in the default row colour
 
 ### Requirement: Row menu order
 The right-click menu of a prompt row SHALL list the "Send to" entries first, then the `Open` entry, then the external-editor entries.
