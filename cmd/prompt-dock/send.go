@@ -72,26 +72,28 @@ func send(value string) error {
 	// frontmatter block (design D1); fill("") removes the argument
 	// placeholders — no value can be given yet, so `${ARGUMENTS:-x}` becomes
 	// `x` and `$ARGUMENTS` is removed (spec: prompt-arguments).
+	emptyFail := func() error {
+		toast(fmt.Sprintf("Send to %s failed: %q is empty.", label, promptName(rel)))
+		return fmt.Errorf("send: prompt file is empty: %s", abs)
+	}
 	p, err := loadPrompt(abs)
+	if errors.Is(err, errEmptyPrompt) {
+		return emptyFail()
+	}
 	if err != nil {
-		if errors.Is(err, errEmptyPrompt) {
-			toast(fmt.Sprintf("Send to %s failed: %q is empty.", label, promptName(rel)))
-			return fmt.Errorf("send: prompt file is empty: %s", abs)
-		}
 		toast(fmt.Sprintf("Send to %s failed: couldn't read %q.", label, promptName(rel)))
 		return fmt.Errorf("send: read failed for %s: %w", abs, err)
 	}
 	text, err := p.fill("")
 	if err != nil {
-		toast(fmt.Sprintf("Send to %s failed: %q is empty.", label, promptName(rel)))
-		return fmt.Errorf("send: prompt file is empty after the fill: %s", abs)
+		return emptyFail()
 	}
 
 	// The text is ONE argv element (no shell, design D4), so its newlines
-	// survive; `agent prompt` submits it in one atomic request. `--` ends
-	// option parsing: dash-leading prompt text (a leading bullet) is otherwise
-	// rejected as an unknown option. The text
-	// must stay last, because everything after `--` is positional.
+	// survive. `agent prompt` submits it in one atomic request. `--` ends
+	// option parsing, so dash-leading text (a leading bullet or YAML `---`) is
+	// not rejected as an unknown option. The text must stay last, because
+	// everything after `--` is positional.
 	res := luvus([]string{"agent", "prompt", pane, "--terminal-id", terminalId, "--", text}, "")
 	if res.Status != 0 {
 		// `agent_not_ready` (permission prompt up), a stale target, or any

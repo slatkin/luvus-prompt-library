@@ -1,7 +1,7 @@
 // prompt.go — the prompt text rules in one place: read a prompt file and
 // strip the BOM and the frontmatter block, read the `argument-hint`, and
-// fill the argument placeholders (design D1). `send` and the later argument
-// input panel call only these two operations.
+// fill the argument placeholders (design D1). `send` calls only these two
+// operations.
 package main
 
 import (
@@ -23,11 +23,11 @@ var errEmptyPrompt = errors.New("prompt is empty")
 
 // placeholder matches the two argument forms: the default form
 // `${ARGUMENTS:-x}` and the plain `$ARGUMENTS` (design D3).
-var placeholder = regexp.MustCompile(`\$\{ARGUMENTS:-([^}]*)\}|\$ARGUMENTS`)
+var placeholder = regexp.MustCompile(`\$\{ARGUMENTS:-[^}]*\}|\$ARGUMENTS`)
 
 // loadPrompt reads the prompt file at abs, removes the BOM, splits the
 // frontmatter (design D2), and refuses a body that is only whitespace. A
-// read failure returns the wrapped os.ReadFile error.
+// read failure returns the os.ReadFile error unchanged.
 func loadPrompt(abs string) (Prompt, error) {
 	raw, err := os.ReadFile(abs)
 	if err != nil {
@@ -94,7 +94,7 @@ func (p Prompt) fill(arg string) (string, error) {
 	text := placeholder.ReplaceAllStringFunc(p.Body, func(match string) string {
 		if def, ok := strings.CutPrefix(match, "${ARGUMENTS:-"); ok {
 			if arg == "" {
-				return def[:len(def)-1]
+				return strings.TrimSuffix(def, "}")
 			}
 			return arg
 		}

@@ -21,10 +21,10 @@ func writePrompt(t *testing.T, text string) string {
 
 func TestLoadPrompt(t *testing.T) {
 	tests := []struct {
-		name string
-		text string
-		p    Prompt
-		want error // nil, errEmptyPrompt, or any other error
+		name  string
+		text  string
+		p     Prompt
+		empty bool // want errEmptyPrompt instead of a body
 	}{
 		{
 			name: "BOM is removed before the frontmatter split",
@@ -77,30 +77,27 @@ func TestLoadPrompt(t *testing.T) {
 			p:    Prompt{Body: "body\n"},
 		},
 		{
-			name: "block with no body is empty",
-			text: "---\nargument-hint: fix\n---\n",
-			want: errEmptyPrompt,
+			name:  "block with no body is empty",
+			text:  "---\nargument-hint: fix\n---\n",
+			empty: true,
 		},
 		{
-			name: "whitespace-only file is empty",
-			text: "  \n\t\n",
-			want: errEmptyPrompt,
+			name:  "whitespace-only file is empty",
+			text:  "  \n\t\n",
+			empty: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p, err := loadPrompt(writePrompt(t, tt.text))
-			if tt.want == nil {
-				if err != nil {
-					t.Fatalf("loadPrompt = %v, want nil", err)
-				}
-			} else if tt.want == errEmptyPrompt {
+			if tt.empty {
 				if !errors.Is(err, errEmptyPrompt) {
 					t.Fatalf("loadPrompt = %v, want errEmptyPrompt", err)
 				}
 				return
-			} else {
-				t.Fatalf("test %q has an unexpected want error: %v", tt.name, tt.want)
+			}
+			if err != nil {
+				t.Fatalf("loadPrompt = %v, want nil", err)
 			}
 			if p != tt.p {
 				t.Errorf("loadPrompt = %#v, want %#v", p, tt.p)
