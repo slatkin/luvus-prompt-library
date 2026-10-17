@@ -1,6 +1,6 @@
 id = "slatkin.prompt-dock"
 name = "Prompt Dock"
-version = "0.4.0"
+version = "0.3.0"
 min_luvus_version = "0.14.3"
 description = "A sidebar dock for a hierarchical markdown prompt library: browse, edit, and send prompts to agents."
 
@@ -15,14 +15,6 @@ placement = "sidebar.left"
 # `go install ./cmd/prompt-dock` by hand (see README).
 [[build]]
 command = ["go", "install", "./cmd/prompt-dock"]
-
-# The input panel for a prompt with an argument hint: send opens it as a
-# split, and the pane closes by itself when prompt-dock ask exits.
-[[panes]]
-id = "ask"
-title = "Prompt argument"
-placement = "split"
-command = ["prompt-dock", "ask"]
 
 # Repaint the dock after a restart (dock contents are not persisted).
 [[startup]]

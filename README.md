@@ -5,8 +5,7 @@ markdown files. Browse the library as a folder tree, click a prompt to select
 it, then open it in the luvus "Open files with" editor (fallback `nvim`) or in
 an external editor (zed, VS Code) from the right-click menu. That menu also
 sends the prompt to a live agent in one click: the text is pasted into the
-agent and submitted in one step. A prompt that takes an argument first opens
-a small input panel — see [Prompt arguments](#prompt-arguments).
+agent and submitted in one step.
 
 Status: proof of concept. Planned follow-ups are tracked in
 [issue #2](https://github.com/slatkin/luvus-prompt-library/issues/2).
@@ -63,11 +62,9 @@ and Edit entries. Each label names the agent's alias or kind and its pane.
 Plain shell panes do not show. Sending pastes the prompt text into the agent
 and submits it in one atomic request. Before every send, a leading YAML
 frontmatter block (a `---` first line closed by a later `---` line) is
-removed, `$ARGUMENTS` becomes the argument value, and `${ARGUMENTS:-x}`
-becomes the value, or its default `x` when no value was given. A body that is
-empty after that is refused with a toast, and nothing is sent. A prompt whose
-frontmatter has an `argument-hint` asks for that value first — see
-[Prompt arguments](#prompt-arguments). The file is read at send time, so edits
+removed, `$ARGUMENTS` is removed, and `${ARGUMENTS:-x}` becomes `x` — there
+is no way to give a value yet. A body that is empty after that is refused
+with a toast, and nothing is sent. The file is read at send time, so edits
 saved after the last dock repaint go out. If the agent is not ready (for
 example it is waiting on a permission prompt), nothing is queued and a toast
 tells you the send failed. A send target from a stale menu is rejected if the
@@ -78,41 +75,12 @@ when an agent's status changes, so new agents appear without a manual
 refresh. The row menu also has a **Refresh prompts** action if you want to
 force one.
 
-## Prompt arguments
-
-A prompt whose frontmatter has a non-empty `argument-hint` asks for a value
-before it is sent. Picking a **Send to** entry for such a prompt opens a
-small input panel in a new split pane — it splits the pane that had the focus
-and takes the focus — and no text reaches the agent yet. (A prompt whose body
-is empty after the frontmatter is removed is refused with a toast before the
-panel opens.) The panel shows the prompt name, the target agent label, and a
-one-line text field that shows the hint text while the field is empty. The
-field has the keyboard focus when the panel opens.
-
-- **Enter** sends the prompt with the typed value filled in, and the panel
-closes. An empty value is allowed: `$ARGUMENTS` is then removed and
-`${ARGUMENTS:-x}` falls back to its default. The send obeys the same
-stale-target guard and failure toasts as a direct send: if the target pane is
-gone by the time you press Enter, no text reaches any pane and an error toast
-shows.
-- **Esc** (or **Ctrl+C**) cancels: the panel closes and no text reaches any
-agent.
-- When the panel closes, by send or by cancel, the focus goes back to the
-pane that had it before the panel opened, if that pane still exists.
-
-A prompt with no `argument-hint`, or with an empty one, is sent at once with
-an empty value — no panel. If the panel is still open when you quit luvus,
-the panel that luvus opens again on the next launch closes at once and sends
-nothing.
-
 ## Requirements
 
-- **Go 1.26 or newer** — the module is one Go binary, `prompt-dock`, built
+- **Go 1.22 or newer** — the module is one Go binary, `prompt-dock`, built
   with `go install` from this checkout. Go is needed only at install time; the
-  binary itself has no runtime dependencies. There is no Node and no npm. The
-  input panel (see "Prompt arguments" below) is built on the TUI libraries
-  `charm.land/bubbletea/v2` and `charm.land/bubbles/v2`, which need Go 1.26
-  or later.
+  binary itself has no runtime dependencies and uses the Go standard library
+  only. There is no Node and no npm.
 - **`GOBIN` on the `PATH` that luvus sees** — `go install` writes the binary to
   `GOBIN` (`~/go/bin` by default), and luvus starts the module by name from
   `PATH`. If luvus starts from a desktop launcher, its `PATH` may differ from

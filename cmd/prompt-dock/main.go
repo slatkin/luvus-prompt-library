@@ -12,7 +12,7 @@ import (
 	"os"
 )
 
-const usage = "usage: prompt-dock <refresh|toggle|select|edit-inline|edit-external|send|ask>"
+const usage = "usage: prompt-dock <refresh|toggle|select|edit-inline|edit-external|send>"
 
 // runEditInline opens a prompt in a split pane (task 4.1). It replaces the
 // LUVUS_MODULE_ACTION_ID branch of edit.ts.
@@ -51,7 +51,6 @@ var verbs = map[string]func() error{
 	"edit-inline":   runEditInline,
 	"edit-external": runEditExternal,
 	"send":          runSend,
-	"ask":           runAsk,
 }
 
 func main() {

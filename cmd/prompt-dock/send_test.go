@@ -7,7 +7,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -19,8 +18,6 @@ func runSendInTest(t *testing.T, value string, root string) (string, error) {
 	log := fakeLuvusLog(t)
 	t.Setenv("LUVUS_BIN_PATH", filepath.Join(filepath.Dir(log), "fake-luvus"))
 	t.Setenv("LUVUS_SETTING_ROOT", root)
-	t.Setenv("LUVUS_MODULE_STATE_DIR", t.TempDir())
-	t.Setenv("LUVUS_PANE_ID", "3")
 	err := send(value)
 	raw, err2 := os.ReadFile(log)
 	if err2 != nil {
@@ -30,13 +27,6 @@ func runSendInTest(t *testing.T, value string, root string) (string, error) {
 		t.Fatal(err2)
 	}
 	return string(raw), err
-}
-
-// runSendInTestStateDir returns the module state dir runSendInTest set, so a
-// test can read the handoff file a send wrote.
-func runSendInTestStateDir(t *testing.T) string {
-	t.Helper()
-	return os.Getenv("LUVUS_MODULE_STATE_DIR")
 }
 
 func TestSendRefusesAnAgentWithNoTerminalIdBeforeAnyAgentPromptCall(t *testing.T) {
@@ -178,125 +168,5 @@ func TestSendRefusesAnArgumentsOnlyBody(t *testing.T) {
 	}
 	if strings.Contains(calls, "agent prompt") {
 		t.Errorf("agent prompt was called for a body that fills to empty:\n%s", calls)
-	}
-}
-
-// A hint opens the input panel instead of sending: the handoff file carries
-// the request, the pane open command runs, and no text reaches the agent
-// (spec: argument hint opens the input panel; design D2, D3).
-func TestSendWithAHintWritesTheHandoffAndOpensThePanel(t *testing.T) {
-	skipOnWindows(t)
-	root := tempLibrary(t)
-	if err := os.WriteFile(filepath.Join(root, "shot.md"), []byte("---\nargument-hint: \"[change-name]\"\n---\nbody $ARGUMENTS\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	calls, err := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|shot.md", root)
-	if err != nil {
-		t.Fatalf("send(hinted shot.md) = %v, want nil", err)
-	}
-	if want := "module pane open slatkin.prompt-dock ask --placement split"; !strings.Contains(calls, want) {
-		t.Errorf("call log missing the pane open call %q:\n%s", want, calls)
-	}
-	if strings.Contains(calls, "agent prompt") {
-		t.Errorf("agent prompt was called for a hinted prompt:\n%s", calls)
-	}
-	want := `{"value":"9|` + strings.Repeat("d", 32) + `|shot.md","return_pane":"3"}` + "\n"
-	raw, err := os.ReadFile(filepath.Join(runSendInTestStateDir(t), "ask.json"))
-	if err != nil {
-		t.Fatalf("ask.json was not written: %v", err)
-	}
-	if string(raw) != want {
-		t.Errorf("ask.json = %q, want %q", raw, want)
-	}
-}
-
-// The empty check comes before the hint check: a hinted file with no body is
-// refused, and no panel opens (spec: argument hint opens the input panel,
-// scenario "Hint with no body"; design D3).
-func TestSendRefusesAFrontmatterOnlyHintedFileBeforeAnyPaneOpen(t *testing.T) {
-	skipOnWindows(t)
-	root := tempLibrary(t)
-	if err := os.WriteFile(filepath.Join(root, "shot.md"), []byte("---\nargument-hint: \"the change\"\n---\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	calls, err := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|shot.md", root)
-	if err == nil {
-		t.Error("send(frontmatter-only hinted shot.md) = nil, want an error")
-	}
-	if want := `ui toast Send to pane 9 failed: "shot" is empty.`; !strings.Contains(calls, want) {
-		t.Errorf("call log missing %q:\n%s", want, calls)
-	}
-	if strings.Contains(calls, "pane open") {
-		t.Errorf("the pane open command was called for an empty prompt:\n%s", calls)
-	}
-}
-
-// A `$ARGUMENTS` body with no hint is sent at once with the placeholder
-// removed: no panel opens (spec: no hint sends at once, scenario "Placeholder
-// without a hint"; design D3).
-func TestSendSendsAnArgumentsBodyWithoutAHintAtOnce(t *testing.T) {
-	skipOnWindows(t)
-	root := tempLibrary(t)
-	if err := os.WriteFile(filepath.Join(root, "shot.md"), []byte("run $ARGUMENTS now\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	calls, err := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|shot.md", root)
-	if err != nil {
-		t.Fatalf("send(shot.md) = %v, want nil", err)
-	}
-	if want := "agent prompt 9 --terminal-id " + strings.Repeat("d", 32) + " -- run  now"; !strings.Contains(calls, want) {
-		t.Errorf("call log missing the sent body %q:\n%s", want, calls)
-	}
-	if strings.Contains(calls, "pane open") {
-		t.Errorf("the pane open command was called for a prompt with no hint:\n%s", calls)
-	}
-}
-
-// fakeLuvusLogStatus is fakeLuvusLog whose fake exits with the given status
-// on every call, so a test can fail one luvus command.
-func fakeLuvusLogStatus(t *testing.T, status int) string {
-	t.Helper()
-	dir := t.TempDir()
-	log := filepath.Join(dir, "calls.log")
-	script := filepath.Join(dir, "fake-luvus")
-	body := "#!/bin/sh\nPATH=/usr/bin:/bin\necho \"$@\" >> " + log + "\ncat > /dev/null\nexit " + strconv.Itoa(status) + "\n"
-	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	return log
-}
-
-// A failed pane open deletes the handoff file, so no later panel can read a
-// request the user never saw, shows a toast, and returns an error (design
-// D2, D3).
-func TestSendDeletesTheHandoffWhenThePanelFailsToOpen(t *testing.T) {
-	skipOnWindows(t)
-	root := tempLibrary(t)
-	if err := os.WriteFile(filepath.Join(root, "shot.md"), []byte("---\nargument-hint: \"[change-name]\"\n---\nbody\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	log := fakeLuvusLogStatus(t, 1)
-	stateDir := t.TempDir()
-	t.Setenv("LUVUS_BIN_PATH", filepath.Join(filepath.Dir(log), "fake-luvus"))
-	t.Setenv("LUVUS_SETTING_ROOT", root)
-	t.Setenv("LUVUS_MODULE_STATE_DIR", stateDir)
-	t.Setenv("LUVUS_PANE_ID", "3")
-	err := send("9|" + strings.Repeat("d", 32) + "|shot.md")
-	if err == nil {
-		t.Error("send(hinted shot.md) = nil, want an error")
-	}
-	raw, err2 := os.ReadFile(log)
-	if err2 != nil {
-		t.Fatal(err2)
-	}
-	calls := string(raw)
-	if want := "ui toast Couldn't open the input panel"; !strings.Contains(calls, want) {
-		t.Errorf("call log missing %q:\n%s", want, calls)
-	}
-	if strings.Contains(calls, "agent prompt") {
-		t.Errorf("agent prompt was called after a failed pane open:\n%s", calls)
-	}
-	if _, err := os.Stat(filepath.Join(stateDir, "ask.json")); !os.IsNotExist(err) {
-		t.Errorf("ask.json survived a failed pane open: %v", err)
 	}
 }

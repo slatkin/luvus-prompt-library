@@ -29,7 +29,7 @@ The input panel SHALL show the prompt name, the target agent label (spec: agent-
 - **THEN** the field shows `my-change`
 
 ### Requirement: Submit sends the filled prompt
-When the user presses Enter in the input panel, the module SHALL send the prompt to the target agent with the typed value filled in (spec: prompt-arguments, placeholder fill), and the panel SHALL close. An empty value SHALL be allowed, except when the body is empty after the fill (agent-prompt-send refuses it). The send SHALL obey the stale target guard and the failure feedback of agent-prompt-send.
+When the user presses Enter in the input panel, the module SHALL send the prompt to the target agent with the typed value filled in (spec: prompt-arguments, placeholder fill), and the panel SHALL close. An empty value SHALL be allowed. The send SHALL obey the stale target guard and the failure feedback of agent-prompt-send.
 
 #### Scenario: Value given
 - **WHEN** the user types `my-change` and presses Enter
