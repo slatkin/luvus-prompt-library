@@ -13,7 +13,7 @@
 
 ## 3. Integration check
 
-- [ ] 3.1 In luvus, with the rebuilt binary (`go install ./cmd/prompt-dock`), send `claude/shot` and a prompt with frontmatter to a live agent. Check that the agent gets no frontmatter lines and no literal `$ARGUMENTS`, and that the success toast shows. Verify that `luvus module log` shows no failed run.
+- [x] 3.1 In luvus, with the rebuilt binary (`go install ./cmd/prompt-dock`), send `claude/shot` and a prompt with frontmatter to a live agent. Check that the agent gets no frontmatter lines and no literal `$ARGUMENTS`, and that the success toast shows. Verify that `luvus module log` shows no failed run.
 
 ## Workflow follow-up
 
