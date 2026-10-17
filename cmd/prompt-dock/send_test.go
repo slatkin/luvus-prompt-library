@@ -74,12 +74,12 @@ func TestSendReadFailureToastNamesTheAgent(t *testing.T) {
 	}
 }
 
-// Regression: a prompt starting with `-` (YAML frontmatter `---`, a leading
-// bullet) was parsed by `luvus agent prompt` as an option and never submitted.
+// Regression: dash-leading prompt text (a leading bullet) was parsed by
+// `luvus agent prompt` as an option and never submitted.
 func TestSendPassesThePromptAfterDashDashSoDashLeadingTextIsNotAnOption(t *testing.T) {
 	skipOnWindows(t)
 	root := tempLibrary(t)
-	body := "---\nallowed-tools: Read\n---\n\nbody line\n"
+	body := "- bullet line\n"
 	if err := os.WriteFile(filepath.Join(root, "shot.md"), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -95,13 +95,78 @@ func TestSendPassesThePromptAfterDashDashSoDashLeadingTextIsNotAnOption(t *testi
 		t.Fatal(err)
 	}
 	calls := string(raw)
-	if want := "agent prompt 9 --terminal-id " + strings.Repeat("d", 32) + " -- ---"; !strings.Contains(calls, want) {
+	if want := "agent prompt 9 --terminal-id " + strings.Repeat("d", 32) + " -- - "; !strings.Contains(calls, want) {
 		t.Errorf("call log missing the dash-dash separated prompt %q:\n%s", want, calls)
 	}
-	if !strings.Contains(calls, "body line") {
+	if !strings.Contains(calls, "- bullet line") {
 		t.Errorf("the whole text did not arrive as one element:\n%s", calls)
 	}
 	if want := `Sent "shot" to pane 9.`; !strings.Contains(calls, want) {
 		t.Errorf("call log missing the success toast %q:\n%s", want, calls)
+	}
+}
+
+// The frontmatter block goes out with the body (spec: send submits the
+// prompt, scenario "Frontmatter is removed").
+func TestSendStripsTheFrontmatterAndSendsTheBody(t *testing.T) {
+	skipOnWindows(t)
+	root := tempLibrary(t)
+	body := "---\ndescription: x\n---\nbody line\n"
+	if err := os.WriteFile(filepath.Join(root, "shot.md"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	calls, err := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|shot.md", root)
+	if err != nil {
+		t.Fatalf("send(shot.md) = %v, want nil", err)
+	}
+	if want := "agent prompt 9 --terminal-id " + strings.Repeat("d", 32) + " -- body line"; !strings.Contains(calls, want) {
+		t.Errorf("call log missing the body %q:\n%s", want, calls)
+	}
+	for _, line := range []string{"description: x", "body line\n---"} {
+		if strings.Contains(calls, line) {
+			// The second entry guards against the whole file going out with the
+			// block still attached; the first names a frontmatter line.
+			t.Errorf("call log contains frontmatter text %q:\n%s", line, calls)
+		}
+	}
+}
+
+// A file that has a frontmatter block and no body is refused as empty
+// (spec: send submits the prompt, scenario "Only frontmatter").
+func TestSendRefusesAFrontmatterOnlyFile(t *testing.T) {
+	skipOnWindows(t)
+	root := tempLibrary(t)
+	if err := os.WriteFile(filepath.Join(root, "shot.md"), []byte("---\nargument-hint: \"the change\"\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	calls, err := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|shot.md", root)
+	if err == nil {
+		t.Error("send(frontmatter-only shot.md) = nil, want an error")
+	}
+	if want := `ui toast Send to pane 9 failed: "shot" is empty.`; !strings.Contains(calls, want) {
+		t.Errorf("call log missing %q:\n%s", want, calls)
+	}
+	if strings.Contains(calls, "agent prompt") {
+		t.Errorf("agent prompt was called for a frontmatter-only file:\n%s", calls)
+	}
+}
+
+// A body that the fill makes empty is refused (spec: send submits the
+// prompt, scenario "Body empty after the fill"); no value can be given yet.
+func TestSendRefusesAnArgumentsOnlyBody(t *testing.T) {
+	skipOnWindows(t)
+	root := tempLibrary(t)
+	if err := os.WriteFile(filepath.Join(root, "shot.md"), []byte("$ARGUMENTS\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	calls, err := runSendInTest(t, "9|"+strings.Repeat("d", 32)+"|shot.md", root)
+	if err == nil {
+		t.Error("send($ARGUMENTS-only shot.md) = nil, want an error")
+	}
+	if want := `ui toast Send to pane 9 failed: "shot" is empty.`; !strings.Contains(calls, want) {
+		t.Errorf("call log missing %q:\n%s", want, calls)
+	}
+	if strings.Contains(calls, "agent prompt") {
+		t.Errorf("agent prompt was called for a body that fills to empty:\n%s", calls)
 	}
 }

@@ -1,6 +1,6 @@
 id = "slatkin.prompt-dock"
 name = "Prompt Dock"
-version = "0.2.0"
+version = "0.3.0"
 min_luvus_version = "0.14.3"
 description = "A sidebar dock for a hierarchical markdown prompt library: browse, edit, and send prompts to agents."
 

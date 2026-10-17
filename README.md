@@ -60,7 +60,11 @@ when the binary is on `PATH`.
 live agent in the current workspace (from `luvus agent list`), above the Open
 and Edit entries. Each label names the agent's alias or kind and its pane.
 Plain shell panes do not show. Sending pastes the prompt text into the agent
-and submits it in one atomic request. The file is read at send time, so edits
+and submits it in one atomic request. Before every send, a leading YAML
+frontmatter block (a `---` first line closed by a later `---` line) is
+removed, `$ARGUMENTS` is removed, and `${ARGUMENTS:-x}` becomes `x` — there
+is no way to give a value yet. A body that is empty after that is refused
+with a toast, and nothing is sent. The file is read at send time, so edits
 saved after the last dock repaint go out. If the agent is not ready (for
 example it is waiting on a permission prompt), nothing is queued and a toast
 tells you the send failed. A send target from a stale menu is rejected if the
